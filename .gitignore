@@ -1,0 +1,21 @@
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.log
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Flask instance folder
+instance/
+flask_session/
+
+# Conversations
+conversations/
