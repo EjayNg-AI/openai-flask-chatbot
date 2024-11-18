@@ -10,6 +10,7 @@ from datetime import datetime, UTC
 import uuid
 
 SYSTEM_MESSAGE = "You are a helpful assistant.\n\nProvide Python code that is well-documented with clear docstrings and type hints for all functions. Ensure that the code, comments and docstrings are concise, avoids unnecessary line spaces, and adheres to PEP 8 (Python Enhancement Proposal 8) guidelines.\n\nMake sure the code is easy to understand, even for readers unfamiliar with the logic or purpose of each function.\n\n## Steps\n\n1. **Add Type Hints**: \n   - Use Python type hints to specify the types of all function inputs and outputs. This enhances code readability and helps other developers understand the code better.\n\n2. **Write Concise Docstrings**:\n   - Add informative docstrings to every function. Each docstring should include:\n     - The function’s purpose.\n     - A description of the parameters, including their types and roles.\n     - A description of the return value, including its type and content.\n     - Any exceptions the function might raise.\n\n3. **Ensure Clean Code**:\n   - Use consistent, meaningful variable names.\n   - Avoid redundancy and keep functions simple.\n\n4. **Provide Example Usage**:\n   - If a function’s behavior isn’t immediately obvious, include a simple example in the docstring to demonstrate its use and expected output.\n\n## Output Format\n\n- Provide a complete Python script with functions that include type hints and docstrings.\n- Each function’s docstring should use triple double-quotes (`\"\"\"`) and include the following sections:\n  1. **Function Description**\n  2. **Args**: (if applicable)\n  3. **Returns**: (if applicable)\n  4. **Raises**: (if applicable)\n  5. **Example**: (optional, if the function’s behavior may not be obvious)\n\n## Example\n\n ```python \nfrom typing import List, Optional\n\ndef calculate_average(numbers: List[float]) -> Optional[float]:\n    \"\"\"\n    Calculate the average of a list of numbers.\n\n    Args:\n        numbers (List[float]): A list of floating-point numbers.\n\n    Returns:\n        Optional[float]: The average of the numbers, or None if the list is empty.\n\n    Raises:\n        ValueError: If any element in the list is not a valid number.\n\n    Example:\n        >>> calculate_average([1.0, 2.0, 3.0])\n        2.0\n    \"\"\"\n    if not numbers:\n        return None\n    for num in numbers:\n        if not isinstance(num, (int, float)):\n            raise ValueError(\"All elements must be numbers.\")\n    return sum(numbers) / len(numbers)\n ``` \n\n## Notes\n\n- Consider edge cases, such as:\n  - Handling an empty list.\n  - Managing incorrect data types.\n- Ensure consistent formatting for all docstrings.\n- Where applicable, include both value types (e.g., `int`, `float`) and value descriptions to provide extra clarity in type hints and docstrings."
+model_name = "chatgpt-4o-latest"
 
 # Load environment variables from .env file
 load_dotenv()
@@ -116,9 +117,10 @@ def index() -> str:
 @app.route('/get-token', methods=['GET'])
 def get_token():
     global message_accumulate
-    token = str(uuid.uuid4()) + '-system-generated'
+    global model_name
+    token = str(uuid.uuid4())
     message_accumulate.append([token, 1, {"role": "system", "content": SYSTEM_MESSAGE}])
-    return jsonify({'token': token})  # Send token as JSON response
+    return jsonify({'token': token, 'model_name': model_name})  # Send token as JSON response
 
 
 
@@ -176,6 +178,7 @@ def shutdown():
 @app.route('/stream', methods=['GET'])
 def stream():
     global message_accumulate
+    global model_name
     try:
         # Get prompt from URL parameters
         user_input = request.args.get('prompt')
@@ -199,20 +202,21 @@ def stream():
         @copy_current_request_context
         def generate_response(unique_id: str, counter: int, conversation_history: list[Dict]) -> Generator[str, None, None]:
             global message_accumulate
+            global model_name
             try:
                 # Send message indicating new response is starting
                 # yield f"data: {json.dumps({'newResponse': True})}\n\n"
 
                 # Call OpenAI API with conversation history and streaming enabled
                 response = client.chat.completions.create(
-                    model="chatgpt-4o-latest",   
+                    model=model_name,   
                     messages=conversation_history,
-                    temperature=0.25,  # Added some randomness for more natural responses
-                    max_tokens=12000,  # Reduced token limit to prevent timeouts
+                    temperature=0.2,  # Added some randomness for more natural responses
+                    max_tokens=6000,  # Reduced token limit to prevent timeouts
                     stream=True
                 )
 
-                collected_chunks = ['\n']
+                collected_chunks = [' \n']
                 for chunk in response:
                     if chunk.choices[0].delta.content is not None:
                         chunk_message = chunk.choices[0].delta.content
@@ -255,6 +259,17 @@ def reset() -> Dict[str, str]:
     message_accumulate.append([unique_id, counter, {"role": "system", "content": SYSTEM_MESSAGE}])  
     return jsonify({'status': 'Conversation reset successfully'})
 
+
+@app.route('/select_model', methods=['POST'])
+def select_model() -> Dict[str, str]:
+    global message_accumulate
+    global model_name
+    data = request.get_json()
+    unique_id = data.get('uniqueId')
+    model_name = data.get('selectedModel')
+    counter = determine_counter(unique_id) + 1
+    message_accumulate.append([unique_id, counter, {"role": "system", "content": SYSTEM_MESSAGE}])  
+    return jsonify({'status': 'Model reset successfully'})
 
 
 if __name__ == '__main__':

@@ -187,8 +187,18 @@
 
 
 <body>
+    <div class="drop-down-menu">
+        <form>
+            <label for="language-model">Select Language Model:</label>
+            <select id="language-model">
+                <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
+                <option value="gpt-4o">gpt-4o</option>
+                <!-- Add other models as needed -->
+            </select>
+            <button id="model_choice">Select Model</button>
+        </form>
+    </div>    
 
-    
     <div class="control-panel">
         <textarea type="text" id="query-input" class="query-input" placeholder="Enter your question..."></textarea>
         <button id="submit-btn" class="button submit-btn">Submit</button>
@@ -207,6 +217,7 @@
     <script>
         hljs.highlightAll();
 
+        const dropdown_menu = document.getElementById('language-model');
         const queryInput = document.getElementById('query-input');
         const submitBtn = document.getElementById('submit-btn');
         const SaveBtn = document.getElementById('save-btn');
@@ -214,13 +225,16 @@
         const resetBtn = document.getElementById('reset-btn');
         const markdownInput = document.getElementById('markdown-input');
         const preview = document.getElementById('preview');
+        const choose_model = document.getElementById('model_choice');
 
         submitBtn.disabled = true;
         SaveBtn.disabled = true;
+        choose_model.disabled = true;
         
 
-        // Define uniqueId in the global scope
+        // Define uniqueId and model_name in the global scope
         let uniqueId;
+        let model_name;
 
         // Fetch token from the Flask backend
         fetch('/get-token')
@@ -228,18 +242,52 @@
             .then(data => {
                 // Set the global uniqueId
                 uniqueId = data.token;
+                model_name = data.model_name;
 
                 // Append the token to the markdown input value if markdownInput exists
                 if (markdownInput) {
                     markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+                    markdownInput.value += `\n Model: ${model_name} \n`;
                     submitBtn.disabled = false;
                     SaveBtn.disabled = false;
+                    choose_model.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Error fetching token:', error);
             });
 
+
+        choose_model.addEventListener('click', async () => {
+            selectedModel = dropdown_menu.value;
+            model_name = selectedModel;
+            try {
+                const response = await fetch('/select_model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                    uniqueId: uniqueId,
+                    selectedModel: selectedModel,
+                    })
+                });
+                
+                if (response.ok) {
+                    markdownInput.value = '';
+                    preview.innerHTML = '';
+                    queryInput.value = '';
+                    markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+                    markdownInput.value += `\n Model: ${model_name} \n`;
+                    renderMarkdown();
+                    autoResize();
+                } else {
+                    console.error('Failed to choose model');
+                }
+            } catch (error) {
+                console.error('Error choosing model:', error);
+            }
+        });
 
 
         // Auto-resize Function
@@ -395,7 +443,7 @@
         }
 
         function appendConversationTurn(userQuery) {
-            markdownInput.value += `\n\n**You:** \n\n ${userQuery}\n\n**Assistant:** \n\n `;
+            markdownInput.value += `\n\n**You:** \n\n ${userQuery} \n\n**Model:** ${model_name} \n\n**Assistant:** \n\n `;
             renderMarkdown();
         }
         
@@ -465,6 +513,8 @@
                     markdownInput.value = '';
                     preview.innerHTML = '';
                     queryInput.value = '';
+                    markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+                    markdownInput.value += `\n Model: ${model_name} \n`;
                     renderMarkdown();
                     autoResize();
                 } else {
