@@ -251,6 +251,36 @@ def stream():
                 except Exception as e:
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
                     yield f"data: Error: An error occurred while processing your request. Please try again.\n\n"
+
+            elif "o1" in model_name:
+                try:
+                    # Send message indicating new response is starting
+                    # yield f"data: {json.dumps({'newResponse': True})}\n\n"
+
+                    # Call OpenAI API with conversation history and streaming enabled
+                    response = client.chat.completions.create(
+                        model=model_name,   
+                        messages=cc,
+                        stream=True
+                    )                
+                    for chunk in response:
+                        if chunk.choices[0].delta.content is not None:
+                            chunk_message = chunk.choices[0].delta.content
+                            collected_chunks.append(chunk_message)
+                            chunk_message = chunk_message.replace("\\", "\\\\")
+                            yield f"data: {json.dumps({'content': chunk_message})}\n\n"
+
+                    # After streaming, append the full bot message to the session
+                    bot_message = ''.join(collected_chunks)
+                    message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
+
+                    # Emit 'done' event to signal completion
+                    yield f"event: done\ndata: {json.dumps({'message': 'Stream complete'})}\n\n"
+        
+                except Exception as e:
+                    logger.error(f"Error in generate_response: {e}", exc_info=True)
+                    yield f"data: Error: An error occurred while processing your request. Please try again.\n\n"
+
         
             elif "claude" in model_name:
                 try:
