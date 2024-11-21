@@ -189,7 +189,7 @@
 <body>
     <div class="drop-down-menu">
         <form>
-            <label for="language-model">Select Language Model:</label>
+            <label for="language-model">21 Nov 2024 2pm - Select Language Model:</label>
             <select id="language-model">
                 <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
                 <option value="gpt-4o">gpt-4o</option>
@@ -199,8 +199,8 @@
                 <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022</option>
                 <!-- Add other models as needed -->
             </select>
-            <button id="model_choice">Select Model</button>
         </form>
+        <button id="model_choice">Select Model</button>
     </div>    
 
     <div class="control-panel">
@@ -278,12 +278,10 @@
                 });
                 
                 if (response.ok) {
-                    markdownInput.value = '';
-                    preview.innerHTML = '';
-                    queryInput.value = '';
-                    markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+                    markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
                     markdownInput.value += `\n Model: ${model_name} \n`;
-                    renderMarkdown();
+                    queryInput.value = '';
+                    renderMarkdown(renderMath = true);
                     autoResize();
                 } else {
                     console.error('Failed to choose model');
@@ -464,7 +462,7 @@
             appendConversationTurn(query);
 
             // Include the uniqueId in the request
-            const eventSource = new EventSource(`/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}`);
+            const eventSource = new EventSource(`/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}&modelmame=${encodeURIComponent(model_name)}`);
 
             // const eventSource = new EventSource(`/stream?prompt=${encodeURIComponent(query)}`);
     

@@ -196,12 +196,17 @@ def stream():
         # Get prompt from URL parameters
         user_input = request.args.get('prompt')
         unique_id = request.args.get('uniqueId')
+        model_name = request.args.get('modelmame')
 
         if (not user_input) or (len(user_input.strip()) == 0):
             return jsonify({'error': 'No prompt provided'}), 400
 
         if (not unique_id) or (len(unique_id.strip()) == 0):
             return jsonify({'error': 'No Unique Session ID provided'}), 400
+        
+        if (not model_name) or (len(model_name.strip()) == 0):
+            return jsonify({'error': 'Invalid Model Name provided'}), 400
+        
         
         counter = determine_counter(unique_id)
 
@@ -346,8 +351,6 @@ def select_model() -> Dict[str, str]:
     data = request.get_json()
     unique_id = data.get('uniqueId')
     model_name = data.get('selectedModel')
-    counter = determine_counter(unique_id) + 1
-    message_accumulate.append([unique_id, counter, {"role": "system", "content": SYSTEM_MESSAGE}])  
     return jsonify({'status': 'Model reset successfully'})
 
 
