@@ -90,6 +90,16 @@
             color: white;
         }
 
+        .clearscreen-btn {
+            background-color: #550055;
+            color: white;
+        }
+
+        .clearscreen-btn:hover {
+            background-color: #990099;
+            color: white;
+        }
+
         .close-btn {
             background-color: #0000AA;
             color: white;
@@ -193,6 +203,8 @@
             <select id="language-model">
                 <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
                 <option value="gpt-4o">gpt-4o</option>
+                <option value="gpt-4o-2024-05-13">gpt-4o-2024-05-13</option>
+                <option value="gpt-4o-2024-08-06">gpt-4o-2024-08-06</option>
                 <option value="gpt-4o-mini">gpt-4o-mini</option>
                 <option value="o1-preview">o1-preview</option>
                 <option value="o1-mini">o1-mini</option>
@@ -206,6 +218,7 @@
     <div class="control-panel">
         <textarea type="text" id="query-input" class="query-input" placeholder="Enter your question..."></textarea>
         <button id="submit-btn" class="button submit-btn">Submit</button>
+        <button id="clearscreen-btn" class="button clearscreen-btn">Clear Screen</button>
         <button id="save-btn" class="button save-btn">Save</button>
         <button id="reset-btn" class="button reset-btn">Reset</button>
         <!-- Shutdown Button (for development purposes) -->
@@ -224,6 +237,7 @@
         const dropdown_menu = document.getElementById('language-model');
         const queryInput = document.getElementById('query-input');
         const submitBtn = document.getElementById('submit-btn');
+        const clear_scr = document.getElementById('clearscreen-btn');
         const SaveBtn = document.getElementById('save-btn');
         const closeBtn = document.getElementById('shutdown-btn');
         const resetBtn = document.getElementById('reset-btn');
@@ -234,6 +248,7 @@
         submitBtn.disabled = true;
         SaveBtn.disabled = true;
         choose_model.disabled = true;
+        clear_scr.disabled = true;
         
 
         // Define uniqueId and model_name in the global scope
@@ -255,11 +270,20 @@
                     submitBtn.disabled = false;
                     SaveBtn.disabled = false;
                     choose_model.disabled = false;
+                    clear_scr.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Error fetching token:', error);
             });
+        
+
+        clear_scr.addEventListener('click', async () => {
+            queryInput.value = '';
+            autoResize();
+            preview.innerHTML = '';
+            markdownInput.value = '';
+        });
 
 
         choose_model.addEventListener('click', async () => {
