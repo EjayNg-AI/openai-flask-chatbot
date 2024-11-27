@@ -235,8 +235,8 @@ def stream():
                     response = client.chat.completions.create(
                         model=model_name,   
                         messages=conversation_history,
-                        temperature=0.2,  # Added some randomness for more natural responses
-                        max_tokens=4095,  # Reduced token limit to prevent timeouts
+                        temperature=0,   
+                        max_tokens=4095,   
                         stream=True
                     )                
                     for chunk in response:
@@ -291,8 +291,8 @@ def stream():
                 try:
                     with anthropic_client.messages.stream(
                         model=model_name,
-                        max_tokens=6000,
-                        temperature=0.2,
+                        max_tokens=5000,
+                        temperature=0,
                         system = sys_anthropic,
                         messages=cc,
                     ) as stream:
