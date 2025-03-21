@@ -1,19 +1,161 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Local Directory Displayer</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      #container {
+        display: flex;
+        height: 100vh;
+      }
+      #left-panel {
+        width: 20%;
+        border-right: 1px solid #ccc;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
+      #right-panel {
+        flex: 1;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
+      button {
+        margin: 5px 0;
+        width: 100%;
+      }
+      .node {
+        margin-left: 20px;
+      }
+      .file-entry {
+        display: flex;
+        align-items: center;
+        margin: 2px 0;
+      }
+      .directory-entry {
+        font-weight: bold;
+        margin: 2px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="left-panel">
+        <button id="open-folder">Open Folder</button>
+        <button id="load-selection">Load Selection</button>
+        <button id="refresh">Refresh</button>
+        <div id="directory-tree"></div>
+      </div>
+      <div id="right-panel">
+        <h2>Concatenated File Contents</h2>
+        <!-- Using a <pre> element to preserve formatting -->
+        <pre id="output" style="white-space: pre-wrap"></pre>
+      </div>
+    </div>
 
-<head>
-    <meta charset="utf-8">
-    <title>File/Directory Selection</title>
-</head>
+    <script>
+      let selectedFiles = [];
 
-<body>
-    <h1>Select Files or a Directory</h1>
-    <form method="POST" action="/upload" enctype="multipart/form-data">
-        <!-- The input below allows selecting multiple files or a directory -->
-        <input type="file" name="files" id="files" multiple webkitdirectory directory>
-        <br><br>
-        <button type="submit">Upload</button>
-    </form>
-</body>
+      // Recursively create the tree view.
+      function createTree(node, container) {
+        if (Array.isArray(node)) {
+          node.forEach((item) => createTree(item, container));
+        } else {
+          const div = document.createElement("div");
+          div.className = "node";
 
+          if (node.type === "directory") {
+            const span = document.createElement("span");
+            span.textContent = node.name;
+            span.className = "directory-entry";
+            div.appendChild(span);
+            container.appendChild(div);
+            if (node.children && node.children.length > 0) {
+              createTree(node.children, div);
+            }
+          } else if (node.type === "file") {
+            const label = document.createElement("label");
+            label.className = "file-entry";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.value = node.path;
+            checkbox.addEventListener("change", function (e) {
+              if (e.target.checked) {
+                selectedFiles.push(node.path);
+              } else {
+                selectedFiles = selectedFiles.filter(
+                  (item) => item !== node.path
+                );
+              }
+            });
+            label.appendChild(document.createTextNode(node.name));
+            label.appendChild(checkbox);
+            div.appendChild(label);
+            container.appendChild(div);
+          }
+        }
+      }
+
+      function loadDirectoryTree(structure) {
+        const treeDiv = document.getElementById("directory-tree");
+        treeDiv.innerHTML = ""; // Clear previous tree.
+        createTree(structure, treeDiv);
+        // Reset selections after loading a new tree.
+        selectedFiles = [];
+      }
+
+      document
+        .getElementById("open-folder")
+        .addEventListener("click", function () {
+          fetch("/open_folder", { method: "POST" })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                loadDirectoryTree(data.structure);
+              }
+            })
+            .catch((err) => console.error(err));
+        });
+
+      document.getElementById("refresh").addEventListener("click", function () {
+        fetch("/refresh")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              alert(data.error);
+            } else {
+              loadDirectoryTree(data.structure);
+            }
+          })
+          .catch((err) => console.error(err));
+      });
+
+      document
+        .getElementById("load-selection")
+        .addEventListener("click", function () {
+          fetch("/load_selection", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files: selectedFiles }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                // Display the concatenated string in the <pre> element.
+                document.getElementById("output").textContent = data.result;
+              }
+            })
+            .catch((err) => console.error(err));
+        });
+    </script>
+  </body>
 </html>
