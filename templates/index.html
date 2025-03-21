@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,30 +45,38 @@
             background-color: #f0f0f0;
             border-bottom: 1px solid #ddd;
         }
-        
+
         .query-input {
             font-size: 16px;
-            flex: 1; /* Take up available horizontal space */
-            resize: none; /* Disable manual resizing */
+            flex: 1;
+            /* Take up available horizontal space */
+            resize: none;
+            /* Disable manual resizing */
             line-height: 1.2;
-            min-height: 10px;  /* Approx. 1 line */
-            max-height: 100px; /* Approx. 10 lines */
-            overflow-y: auto;  /* Show scrollbar when content exceeds max-height */
+            min-height: 10px;
+            /* Approx. 1 line */
+            max-height: 100px;
+            /* Approx. 10 lines */
+            overflow-y: auto;
+            /* Show scrollbar when content exceeds max-height */
             transition: height 0.2s ease;
             padding: 2.3px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        
+
         .button {
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            width: 120px; /* Fixed width */
-            height: 60px; /* Fixed height */
-            flex-shrink: 0; /* Prevent buttons from shrinking */
+            width: 120px;
+            /* Fixed width */
+            height: 60px;
+            /* Fixed height */
+            flex-shrink: 0;
+            /* Prevent buttons from shrinking */
         }
 
         .save-btn {
@@ -79,7 +88,7 @@
             background-color: #666666;
             color: white;
         }
-        
+
         .submit-btn {
             background-color: #4CAF50;
             color: white;
@@ -109,7 +118,7 @@
             background-color: #0055FF;
             color: white;
         }
-        
+
         .reset-btn {
             background-color: #f44336;
             color: white;
@@ -119,7 +128,7 @@
             background-color: #ff0099;
             color: white;
         }
-        
+
         .conversation-turn {
             margin-bottom: 20px;
             padding-bottom: 20px;
@@ -138,7 +147,8 @@
             overflow: hidden;
         }
 
-        .editor, .preview {
+        .editor,
+        .preview {
             width: 50%;
             padding: 20px;
             box-sizing: border-box;
@@ -213,7 +223,7 @@
             </select>
         </form>
         <button id="model_choice">Select Model</button>
-    </div>    
+    </div>
 
     <div class="control-panel">
         <textarea type="text" id="query-input" class="query-input" placeholder="Enter your question..."></textarea>
@@ -249,7 +259,7 @@
         SaveBtn.disabled = true;
         choose_model.disabled = true;
         clear_scr.disabled = true;
-        
+
 
         // Define uniqueId and model_name in the global scope
         let uniqueId;
@@ -276,7 +286,7 @@
             .catch(error => {
                 console.error('Error fetching token:', error);
             });
-        
+
 
         clear_scr.addEventListener('click', async () => {
             queryInput.value = '';
@@ -296,11 +306,11 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                    uniqueId: uniqueId,
-                    selectedModel: selectedModel,
+                        uniqueId: uniqueId,
+                        selectedModel: selectedModel,
                     })
                 });
-                
+
                 if (response.ok) {
                     markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
                     markdownInput.value += `\n Model: ${model_name} \n`;
@@ -392,21 +402,21 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     timestamp: new Date().toISOString()
-                })   
+                })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                } else if (data.error) {
-                    alert(`Error: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                    } else if (data.error) {
+                        alert(`Error: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         });
 
         let renderTimeout;
@@ -415,10 +425,10 @@
             clearTimeout(renderTimeout);
 
             let markdownText = markdownInput.value;
-            
+
             marked.setOptions({
                 breaks: true,
-                highlight: function(code, lang) {
+                highlight: function (code, lang) {
                     if (lang && hljs.getLanguage(lang)) {
                         return hljs.highlight(code, { language: lang }).value;
                     } else {
@@ -472,56 +482,78 @@
             markdownInput.value += `\n\n**You:** \n\n ${userQuery} \n\n**Model:** ${model_name} \n\n**Assistant:** \n\n `;
             renderMarkdown();
         }
-        
-        submitBtn.addEventListener('click', async () => {
 
+        submitBtn.addEventListener('click', async () => {
             const query = queryInput.value.trim();
             if (!query) return;
 
             queryInput.value = '';
             autoResize();
-            let isMathRendered = false;
-
             submitBtn.disabled = true;
             appendConversationTurn(query);
 
-            // Include the uniqueId in the request
-            const eventSource = new EventSource(`/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}&modelmame=${encodeURIComponent(model_name)}`);
+            let isMathRendered = false;
 
-            // const eventSource = new EventSource(`/stream?prompt=${encodeURIComponent(query)}`);
-    
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-        
-                if (data.newResponse) {
-                    // Handle new response initiation if needed
-                } else if (data.content) {
-                    markdownInput.value += data.content;
-                    renderMarkdown(false); // Render without MathJax
-                    // Scroll to bottom
-                    markdownInput.scrollTop = markdownInput.scrollHeight;
-                    preview.scrollTop = preview.scrollHeight;
+            const url = `/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}&modelmame=${encodeURIComponent(model_name)}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Network error: ${response.statusText}`);
                 }
-            };
-    
-            eventSource.onerror = (error) => {
-                console.error('EventSource failed:', error);
-                eventSource.close();
-                submitBtn.disabled = false;
-                alert('An error occurred while receiving the response. Please try again.');
-            };
-    
-            // Listen for a custom 'done' event to signify the end of the stream
-            eventSource.addEventListener('done', () => {
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = '';
+                let done = false;
+
+                while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    // Accumulate the stream text
+                    buffer += decoder.decode(value, { stream: true });
+
+                    // Split into lines (each line should be a complete JSON string)
+                    let lines = buffer.split('\n');
+                    // Keep any incomplete line in the buffer
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            try {
+                                // Parse the JSON object from the line
+                                const parsed = JSON.parse(line);
+                                if (parsed.content) {
+                                    // Escape backslashes: replace "\" with "\\"
+                                    const escapedContent = parsed.content.replace(/\\/g, '\\\\');
+                                    // Append only the escaped content to the Editor
+                                    markdownInput.value += escapedContent;
+                                }
+                                // Optionally, handle a "stream complete" message if needed:
+                                // if (parsed.message === 'Stream complete') { ... }
+                            } catch (err) {
+                                console.error("Error parsing JSON:", err);
+                            }
+                        }
+                    }
+                    // Scroll the Editor to the bottom for the latest content
+                    markdownInput.scrollTop = markdownInput.scrollHeight;
+                }
+
+                // Once the stream is complete, update the Preview pane.
                 if (!isMathRendered) {
+                    // Render the final markdown content to update the preview.
                     renderMarkdown(true);
                     isMathRendered = true;
                 }
-                eventSource.close();
                 submitBtn.disabled = false;
-            });
- 
+            } catch (error) {
+                console.error("Streaming error:", error);
+                submitBtn.disabled = false;
+                alert("An error occurred while streaming the response. Please try again.");
+            }
         });
+
 
         resetBtn.addEventListener('click', async () => {
             try {
@@ -531,10 +563,10 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                    uniqueId: uniqueId
+                        uniqueId: uniqueId
                     })
                 });
-                
+
                 if (response.ok) {
                     markdownInput.value = '';
                     preview.innerHTML = '';
@@ -566,4 +598,5 @@
 
     </script>
 </body>
+
 </html>

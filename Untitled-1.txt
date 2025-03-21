@@ -1,0 +1,276 @@
+
+---
+
+Model: gpt-4o
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="gpt-4o",
+  input=[],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={},
+  tools=[],
+  temperature=0,
+  max_output_tokens=2048,
+  top_p=1,
+  store=True
+)
+
+---
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="chatgpt-4o-latest",
+  input=[
+    {
+        "role": "system",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "You are an expert in coding and mathematics. You write code that is modular, well-structured, clean and maintainable."
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "write a poem about mangoes"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "**Ode to the Mango**  \n\nGolden treasure, sweet delight,  \nBathed in sunshine, warm and bright.  \nDripping nectar, rich and pure,  \nA taste no heart could e'er ignore.  \n\nHanging heavy, ripe and round,  \nIn emerald leaves where dreams are found.  \nA summer breeze, a whispered call,  \nTo pluck and savor, juice and all.  \n\nSoft yet firm, a velvet bite,  \nA burst of joy, a spark of light.  \nTropical wonder, nature’s art,  \nA mango’s love fills every heart.  \n\nFrom orchard trees to eager hands,  \nA gift bestowed from sun-kissed lands.  \nOh, mango sweet, forever stay,  \nA golden joy in bright array.  "
+            }
+        ]
+    }
+],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={},
+  tools=[],
+  temperature=0,
+  max_output_tokens=2048,
+  top_p=1,
+  store=True
+)
+
+
+
+
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="gpt-4.5-preview",
+  input=[
+    {
+        "role": "system",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "You are an expert in coding and mathematics. You write code that is modular, well-structured, clean and maintainable."
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "write a poem about mangoes"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "**Ode to the Mango**  \n\nGolden treasure, sweet delight,  \nBathed in sunshine, warm and bright.  \nDripping nectar, rich and pure,  \nA taste no heart could e'er ignore.  \n\nHanging heavy, ripe and round,  \nIn emerald leaves where dreams are found.  \nA summer breeze, a whispered call,  \nTo pluck and savor, juice and all.  \n\nSoft yet firm, a velvet bite,  \nA burst of joy, a spark of light.  \nTropical wonder, nature’s art,  \nA mango’s love fills every heart.  \n\nFrom orchard trees to eager hands,  \nA gift bestowed from sun-kissed lands.  \nOh, mango sweet, forever stay,  \nA golden joy in bright array.  "
+            }
+        ]
+    }
+],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={},
+  tools=[],
+  temperature=0,
+  max_output_tokens=2048,
+  top_p=1,
+  store=True
+)
+
+
+
+
+
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="o3-mini",
+  input=[
+    {
+        "role": "developer",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "You are an expert in coding and mathematics. You write code that is modular, well-structured, clean and maintainable."
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "write a poem about mangoes"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "**Ode to the Mango**  \n\nGolden treasure, sweet delight,  \nBathed in sunshine, warm and bright.  \nDripping nectar, rich and pure,  \nA taste no heart could e'er ignore.  \n\nHanging heavy, ripe and round,  \nIn emerald leaves where dreams are found.  \nA summer breeze, a whispered call,  \nTo pluck and savor, juice and all.  \n\nSoft yet firm, a velvet bite,  \nA burst of joy, a spark of light.  \nTropical wonder, nature’s art,  \nA mango’s love fills every heart.  \n\nFrom orchard trees to eager hands,  \nA gift bestowed from sun-kissed lands.  \nOh, mango sweet, forever stay,  \nA golden joy in bright array.  "
+            }
+        ]
+    }
+],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={
+    "effort": "high"
+},
+  tools=[],
+  store=True
+)
+
+
+
+
+
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="o1-pro",
+  input=[
+    {
+        "role": "developer",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "You are an expert in coding and mathematics. You write code that is modular, well-structured, clean and maintainable."
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "write a poem about mangoes"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "**Ode to the Mango**  \n\nGolden treasure, sweet delight,  \nBathed in sunshine, warm and bright.  \nDripping nectar, rich and pure,  \nA taste no heart could e'er ignore.  \n\nHanging heavy, ripe and round,  \nIn emerald leaves where dreams are found.  \nA summer breeze, a whispered call,  \nTo pluck and savor, juice and all.  \n\nSoft yet firm, a velvet bite,  \nA burst of joy, a spark of light.  \nTropical wonder, nature’s art,  \nA mango’s love fills every heart.  \n\nFrom orchard trees to eager hands,  \nA gift bestowed from sun-kissed lands.  \nOh, mango sweet, forever stay,  \nA golden joy in bright array.  "
+            }
+        ]
+    }
+],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={
+    "effort": "high"
+},
+  tools=[],
+  store=True
+)
+
+
+
+
+
+
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+  model="o1",
+  input=[
+    {
+        "role": "developer",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "You are an expert in coding and mathematics. You write code that is modular, well-structured, clean and maintainable."
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "write a poem about mangoes"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "**Ode to the Mango**  \n\nGolden treasure, sweet delight,  \nBathed in sunshine, warm and bright.  \nDripping nectar, rich and pure,  \nA taste no heart could e'er ignore.  \n\nHanging heavy, ripe and round,  \nIn emerald leaves where dreams are found.  \nA summer breeze, a whispered call,  \nTo pluck and savor, juice and all.  \n\nSoft yet firm, a velvet bite,  \nA burst of joy, a spark of light.  \nTropical wonder, nature’s art,  \nA mango’s love fills every heart.  \n\nFrom orchard trees to eager hands,  \nA gift bestowed from sun-kissed lands.  \nOh, mango sweet, forever stay,  \nA golden joy in bright array.  "
+            }
+        ]
+    }
+],
+  text={
+    "format": {
+        "type": "text"
+    }
+},
+  reasoning={
+    "effort": "high"
+},
+  tools=[],
+  store=True
+)
