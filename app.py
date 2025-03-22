@@ -1,3 +1,4 @@
+import sys
 import os
 import copy
 from flask import copy_current_request_context, json, Flask, render_template, request, session, jsonify, Response, stream_with_context, send_from_directory
@@ -11,24 +12,27 @@ from typing import Generator, Dict
 from datetime import datetime, UTC
 import uuid
 
-SYSTEM_MESSAGE = "You are a helpful assistant.\n\nProvide Python code that is well-documented with clear docstrings and type hints for all functions. Ensure that the code, comments and docstrings are concise, avoids unnecessary line spaces, and adheres to PEP 8 (Python Enhancement Proposal 8) guidelines.\n\nMake sure the code is easy to understand, even for readers unfamiliar with the logic or purpose of each function.\n\n## Steps\n\n1. **Add Type Hints**: \n   - Use Python type hints to specify the types of all function inputs and outputs. This enhances code readability and helps other developers understand the code better.\n\n2. **Write Concise Docstrings**:\n   - Add informative docstrings to every function. Each docstring should include:\n     - The function’s purpose.\n     - A description of the parameters, including their types and roles.\n     - A description of the return value, including its type and content.\n     - Any exceptions the function might raise.\n\n3. **Ensure Clean Code**:\n   - Use consistent, meaningful variable names.\n   - Avoid redundancy and keep functions simple.\n\n4. **Provide Example Usage**:\n   - If a function’s behavior isn’t immediately obvious, include a simple example in the docstring to demonstrate its use and expected output.\n\n## Output Format\n\n- Provide a complete Python script with functions that include type hints and docstrings.\n- Each function’s docstring should use triple double-quotes (`\"\"\"`) and include the following sections:\n  1. **Function Description**\n  2. **Args**: (if applicable)\n  3. **Returns**: (if applicable)\n  4. **Raises**: (if applicable)\n  5. **Example**: (optional, if the function’s behavior may not be obvious)\n\n## Example\n\n ```python \nfrom typing import List, Optional\n\ndef calculate_average(numbers: List[float]) -> Optional[float]:\n    \"\"\"\n    Calculate the average of a list of numbers.\n\n    Args:\n        numbers (List[float]): A list of floating-point numbers.\n\n    Returns:\n        Optional[float]: The average of the numbers, or None if the list is empty.\n\n    Raises:\n        ValueError: If any element in the list is not a valid number.\n\n    Example:\n        >>> calculate_average([1.0, 2.0, 3.0])\n        2.0\n    \"\"\"\n    if not numbers:\n        return None\n    for num in numbers:\n        if not isinstance(num, (int, float)):\n            raise ValueError(\"All elements must be numbers.\")\n    return sum(numbers) / len(numbers)\n ``` \n\n## Notes\n\n- Consider edge cases, such as:\n  - Handling an empty list.\n  - Managing incorrect data types.\n- Ensure consistent formatting for all docstrings.\n- Where applicable, include both value types (e.g., `int`, `float`) and value descriptions to provide extra clarity in type hints and docstrings."
+SYSTEM_MESSAGE = "You are an expert in coding. " \
+"Write code that is clean, efficient, modular, and well-documented. " \
+"Ensure all code block are encased with triple backticks"
+
 model_name = "chatgpt-4o-latest"
 
+# Get command line arguments
+arguments = sys.argv[1:]  # sys.argv[0] is the script name itself.
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Initialize Flask app
 app = Flask(__name__)
 
-# Configure with strong secret key - avoid regenerating on each restart
+# Configure with strong secret key
 app.secret_key = os.getenv('FLASK_SECRET_KEY') or os.urandom(24)
 
 # Configure server-side session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
-#  Permanent Session Lifetime is not applicable for temporary sessions
-#  app.config['PERMANENT_SESSION_LIFETIME'] = 36000  # Session timeout in seconds
-
 Session(app)
 message_accumulate = []
 
@@ -42,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 # Define directories
 CONVERSATIONS_DIR = os.path.join(os.getcwd(), 'conversations')
+
 # Ensure directories exist
 os.makedirs(CONVERSATIONS_DIR, exist_ok=True)
 
@@ -52,8 +57,12 @@ try:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
     client = OpenAI(api_key=api_key)
 except Exception as e:
-    logger.critical(f"Failed to initialize OpenAI client: {e}")
-    raise
+    if "openai" in arguments or "chatgpt" in arguments:
+        logger.critical(f"Failed to initialize OpenAI client: {e}")
+        raise
+    else:
+        logger.info("OpenAI client initialization skipped.")
+        client = None  # Explicitly set client to None if initialization fails or skipped
 
 # Initialize Anthropic client with error handling
 try:
@@ -62,9 +71,12 @@ try:
         raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
     anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key)
 except Exception as e:
-    logger.critical(f"Failed to initialize Anthropic client: {e}")
-    raise
-
+    if "anthropic" in arguments or "claude" in arguments:
+        logger.critical(f"Failed to initialize Anthropic client: {e}")
+        raise
+    else:
+        logger.info("Anthropic client initialization skipped.")
+        anthropic_client = None  # Explicitly set client to None if initialization fails or skipped
 
 
 def save_system_messages(timestamp, filename):
@@ -227,18 +239,43 @@ def stream():
             sys_anthropic = sys_message['content']
 
             if "gpt" in model_name:
-                try:
-                    # Send message indicating new response is starting
-                    # yield f"data: {json.dumps({'newResponse': True})}\n\n"
 
+                # Construct full prompt with system message
+                full_prompt = []
+                full_prompt.append(
+                    {"role": "system", 
+                     "content": [{"type": "text", "text": SYSTEM_MESSAGE}]
+                     }
+                )
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            {"role": "user", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            {"role": "assistant", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
+
+                try:
                     # Call OpenAI API with conversation history and streaming enabled
                     response = client.chat.completions.create(
-                        model=model_name,   
-                        messages=conversation_history,
-                        temperature=0,   
-                        max_tokens=8000,   
-                        stream=True
-                    )                
+                        model=model_name,
+                        messages=full_prompt,
+                        response_format={"type": "text"},
+                        temperature=0,
+                        max_completion_tokens=8192,
+                        top_p=1,
+                        frequency_penalty=0,
+                        presence_penalty=0,
+                        store=False,
+                        stream=True,
+                    )
+             
                     for chunk in response:
                         if chunk.choices[0].delta.content is not None:
                             chunk_message = chunk.choices[0].delta.content
@@ -259,36 +296,59 @@ def stream():
                     yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
 
-            elif "o1" in model_name:
-                try:
-                    # Send message indicating new response is starting
-                    # yield f"data: {json.dumps({'newResponse': True})}\n\n"
+            elif ("o1" in model_name or "o3-mini" in model_name):
+                
+                # Construct full prompt with system message
+                full_prompt = []
+                full_prompt.append(
+                    {"role": "developer", 
+                     "content": [{"type": "text", "text": SYSTEM_MESSAGE}]
+                     }
+                )
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            {"role": "user", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            {"role": "assistant", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
 
+                try:
                     # Call OpenAI API with conversation history and streaming enabled
                     response = client.chat.completions.create(
-                        model=model_name,   
-                        messages=cc,
-                        stream=True
-                    )                
+                        model=model_name,
+                        messages=full_prompt,
+                        response_format={"type": "text"},
+                        ## reasoning_effort="high",
+                        store=False,
+                        stream=True,
+                    )
+             
                     for chunk in response:
                         if chunk.choices[0].delta.content is not None:
                             chunk_message = chunk.choices[0].delta.content
                             collected_chunks.append(chunk_message)
-                            chunk_message = chunk_message.replace("\\", "\\\\")
-                            yield f"data: {json.dumps({'content': chunk_message})}\n\n"
+                            ##  chunk_message = chunk_message.replace("\\", "\\\\")
+                            yield json.dumps({'content': chunk_message}) + "\n"
 
                     # After streaming, append the full bot message to the session
                     bot_message = ''.join(collected_chunks)
                     message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
 
                     # Emit 'done' event to signal completion
-                    yield f"event: done\ndata: {json.dumps({'message': 'Stream complete'})}\n\n"
-        
+                    yield json.dumps({'message': 'Stream complete'}) + "\n"
+
                 except Exception as e:
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
-                    yield f"data: Error: An error occurred while processing your request. Please try again.\n\n"
+                    yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
-        
+
             elif "claude" in model_name:
                 try:
                     with anthropic_client.messages.stream(
