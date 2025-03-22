@@ -294,6 +294,60 @@ def stream():
                 except Exception as e:
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
                     yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
+            
+            elif "o1-pro" in model_name:
+
+                # Construct full prompt with system message
+                full_prompt = []
+                full_prompt.append(
+                    {"role": "developer", 
+                     "content": [{"type": "input_text", "text": SYSTEM_MESSAGE}]
+                     }
+                )
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            {"role": "user", 
+                             "content": [{"type": "input_text", "text": messagedict['content']}]
+                             }
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            {"role": "assistant", 
+                             "content": [{"type": "output_text", "text": messagedict['content']}]
+                             }
+                        )
+
+                try:
+                    # Call OpenAI API with conversation history and streaming enabled
+                    response = client.responses.create(
+                        model=model_name,
+                        input=full_prompt,
+                        text={"format": {"type": "text"}},
+                        reasoning={"effort": "high"},
+                        tools=[],
+                        store=False,
+                        stream=True,
+                    )
+             
+                    for chunk in response:
+                        if chunk.choices[0].delta.content is not None:
+                            chunk_message = chunk.choices[0].delta.content
+                            collected_chunks.append(chunk_message)
+                            ##  chunk_message = chunk_message.replace("\\", "\\\\")
+                            yield json.dumps({'content': chunk_message}) + "\n"
+
+                    # After streaming, append the full bot message to the session
+                    bot_message = ''.join(collected_chunks)
+                    message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
+
+                    # Emit 'done' event to signal completion
+                    yield json.dumps({'message': 'Stream complete'}) + "\n"
+
+        
+                except Exception as e:
+                    logger.error(f"Error in generate_response: {e}", exc_info=True)
+                    yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
 
             elif ("o1" in model_name or "o3-mini" in model_name):
@@ -325,7 +379,7 @@ def stream():
                         model=model_name,
                         messages=full_prompt,
                         response_format={"type": "text"},
-                        ## reasoning_effort="high",
+                        reasoning_effort="high",
                         store=False,
                         stream=True,
                     )
