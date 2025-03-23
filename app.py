@@ -208,7 +208,7 @@ def stream():
         # Get prompt from URL parameters
         user_input = request.args.get('prompt')
         unique_id = request.args.get('uniqueId')
-        model_name = request.args.get('modelmame')
+        model_name = request.args.get('modelname')
 
         if (not user_input) or (len(user_input.strip()) == 0):
             return jsonify({'error': 'No prompt provided'}), 400
@@ -301,7 +301,7 @@ def stream():
                 full_prompt = []
                 full_prompt.append(
                     {"role": "developer", 
-                     "content": [{"type": "input_text", "text": SYSTEM_MESSAGE}]
+                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide insightful, forward-thinking, and creative responses to user queries."}]
                      }
                 )
                 for messagedict in conversation_history:
@@ -319,7 +319,7 @@ def stream():
                         )
 
                 try:
-                    # Call OpenAI API with conversation history and streaming enabled
+                    # Call OpenAI API with conversation history
                     response = client.responses.create(
                         model=model_name,
                         input=full_prompt,
@@ -327,23 +327,10 @@ def stream():
                         reasoning={"effort": "high"},
                         tools=[],
                         store=False,
-                        stream=True,
                     )
-             
-                    for chunk in response:
-                        if chunk.choices[0].delta.content is not None:
-                            chunk_message = chunk.choices[0].delta.content
-                            collected_chunks.append(chunk_message)
-                            ##  chunk_message = chunk_message.replace("\\", "\\\\")
-                            yield json.dumps({'content': chunk_message}) + "\n"
-
-                    # After streaming, append the full bot message to the session
-                    bot_message = ''.join(collected_chunks)
+                    bot_message = response.output_text
+                    yield json.dumps({'content': bot_message}) + "\n"
                     message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
-
-                    # Emit 'done' event to signal completion
-                    yield json.dumps({'message': 'Stream complete'}) + "\n"
-
         
                 except Exception as e:
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
@@ -416,20 +403,18 @@ def stream():
                             if chunk_text is not None:
                                 chunk_message = chunk_text
                                 collected_chunks.append(chunk_message)
-                                chunk_message = chunk_message.replace("\\", "\\\\")
-                                yield f"data: {json.dumps({'content': chunk_message})}\n\n"
+                                yield json.dumps({'content': chunk_message}) + "\n"
 
                     # After streaming, append the full bot message to the session
                     bot_message = ''.join(collected_chunks)
                     message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
 
                     # Emit 'done' event to signal completion
-                    yield f"event: done\ndata: {json.dumps({'message': 'Anthropic Stream complete'})}\n\n"
+                    yield json.dumps({'message': 'Stream complete'}) + "\n"
                 
-                except anthropic.APIError as e:
-                    yield f"data: Error in generating Anthropic API output: {str(e)}\n\n"
                 except Exception as e:
-                    yield f"data: Unexpected error: {str(e)}\n\n"
+                    logger.error(f"Error in generate_response: {e}", exc_info=True)
+                    yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
             else:
                 logger.error("Invalid Model")
@@ -438,11 +423,9 @@ def stream():
         return Response(
             stream_with_context(generate_response(unique_id, counter, conversation_history)),
             mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                # 'Transfer-Encoding': 'chunked' # This line is not applicable for waitress
-            }
+            headers={'Cache-Control': 'no-cache'}
         )
+
 
     except Exception as e:
         logger.error(f"Error in stream route: {e}", exc_info=True)

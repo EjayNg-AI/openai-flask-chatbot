@@ -263,6 +263,7 @@
         // Define uniqueId and model_name in the global scope
         let uniqueId;
         let model_name;
+        let streaming_flag;
 
         // Fetch token from the Flask backend
         fetch('/get-token')
@@ -271,11 +272,13 @@
                 // Set the global uniqueId
                 uniqueId = data.token;
                 model_name = data.model_name;
+                streaming_flag = !["o1-pro"].includes(model_name);
 
                 // Append the token to the markdown input value if markdownInput exists
                 if (markdownInput) {
                     markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
                     markdownInput.value += `\n Model: ${model_name} \n`;
+                    markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
                     submitBtn.disabled = false;
                     SaveBtn.disabled = false;
                     choose_model.disabled = false;
@@ -285,6 +288,7 @@
             .catch(error => {
                 console.error('Error fetching token:', error);
             });
+
 
 
         clear_scr.addEventListener('click', async () => {
@@ -311,8 +315,10 @@
                 });
 
                 if (response.ok) {
+                    streaming_flag = !["o1-pro"].includes(model_name);
                     markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
                     markdownInput.value += `\n Model: ${model_name} \n`;
+                    markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
                     queryInput.value = '';
                     renderMarkdown(renderMath = true);
                     autoResize();
@@ -493,63 +499,91 @@
 
             let isMathRendered = false;
 
-            const url = `/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}&modelmame=${encodeURIComponent(model_name)}`;
+            const url = `/stream?prompt=${encodeURIComponent(query)}&uniqueId=${encodeURIComponent(uniqueId)}&modelname=${encodeURIComponent(model_name)}`;
 
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`Network error: ${response.statusText}`);
-                }
+            if (streaming_flag) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`Network error: ${response.statusText}`);
+                    }
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let buffer = '';
-                let done = false;
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let buffer = '';
+                    let done = false;
 
-                while (!done) {
-                    const { value, done: doneReading } = await reader.read();
-                    done = doneReading;
-                    // Accumulate the stream text
-                    buffer += decoder.decode(value, { stream: true });
+                    while (!done) {
+                        const { value, done: doneReading } = await reader.read();
+                        done = doneReading;
+                        // Accumulate the stream text
+                        buffer += decoder.decode(value, { stream: true });
 
-                    // Split into lines (each line should be a complete JSON string)
-                    let lines = buffer.split('\n');
-                    // Keep any incomplete line in the buffer
-                    buffer = lines.pop();
+                        // Split into lines (each line should be a complete JSON string)
+                        let lines = buffer.split('\n');
+                        // Keep any incomplete line in the buffer
+                        buffer = lines.pop();
 
-                    for (const line of lines) {
-                        if (line.trim()) {
-                            try {
-                                // Parse the JSON object from the line
-                                const parsed = JSON.parse(line);
-                                if (parsed.content) {
-                                    // Escape backslashes: replace "\" with "\\"
-                                    const escapedContent = parsed.content.replace(/\\/g, '\\\\');
-                                    // Append only the escaped content to the Editor
-                                    markdownInput.value += escapedContent;
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                try {
+                                    // Parse the JSON object from the line
+                                    const parsed = JSON.parse(line);
+                                    if (parsed.content) {
+                                        // Escape backslashes: replace "\" with "\\"
+                                        const escapedContent = parsed.content.replace(/\\/g, '\\\\');
+                                        // Append only the escaped content to the Editor
+                                        markdownInput.value += escapedContent;
+                                    }
+                                    // Optionally, handle a "stream complete" message if needed:
+                                    // if (parsed.message === 'Stream complete') { ... }
+                                } catch (err) {
+                                    console.error("Error parsing JSON:", err);
                                 }
-                                // Optionally, handle a "stream complete" message if needed:
-                                // if (parsed.message === 'Stream complete') { ... }
-                            } catch (err) {
-                                console.error("Error parsing JSON:", err);
                             }
                         }
+                        // Scroll the Editor to the bottom for the latest content
+                        markdownInput.scrollTop = markdownInput.scrollHeight;
+                    }
+
+                    // Once the stream is complete, update the Preview pane.
+                    if (!isMathRendered) {
+                        // Render the final markdown content to update the preview.
+                        renderMarkdown(true);
+                        isMathRendered = true;
+                    }
+                    submitBtn.disabled = false;
+                } catch (error) {
+                    console.error("Streaming error:", error);
+                    submitBtn.disabled = false;
+                    alert("An error occurred while streaming the response. Please try again.");
+                }
+            }
+            else {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`Network error: ${response.statusText}`);
+                    }
+                    const result = await response.json();
+                    if (result.content) {
+                        markdownInput.value += result.content;
+                    } else {
+                        alert(result.error || "Unexpected error");
                     }
                     // Scroll the Editor to the bottom for the latest content
                     markdownInput.scrollTop = markdownInput.scrollHeight;
+                    if (!isMathRendered) {
+                        // Render the final markdown content to update the preview.
+                        renderMarkdown(true);
+                        isMathRendered = true;
+                    }
+                    submitBtn.disabled = false;
+                } catch (error) {
+                    console.error("Non-streaming error:", error);
+                    submitBtn.disabled = false;
+                    alert("An error occurred. Please try again.");
                 }
-
-                // Once the stream is complete, update the Preview pane.
-                if (!isMathRendered) {
-                    // Render the final markdown content to update the preview.
-                    renderMarkdown(true);
-                    isMathRendered = true;
-                }
-                submitBtn.disabled = false;
-            } catch (error) {
-                console.error("Streaming error:", error);
-                submitBtn.disabled = false;
-                alert("An error occurred while streaming the response. Please try again.");
             }
         });
 
