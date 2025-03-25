@@ -234,9 +234,6 @@ def stream():
             global message_accumulate
             global model_name
             collected_chunks = ['\n']
-            cc = copy.deepcopy(conversation_history)
-            sys_message = cc.pop(0)
-            sys_anthropic = sys_message['content']
 
             if "gpt" in model_name:
 
@@ -391,13 +388,30 @@ def stream():
 
 
             elif "claude" in model_name:
+
+                # Construct full prompt with system message
+                full_prompt = []
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            {"role": "user", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            {"role": "assistant", 
+                             "content": [{"type": "text", "text": messagedict['content']}]
+                             }
+                        )
+
                 try:
                     with anthropic_client.messages.stream(
                         model=model_name,
-                        max_tokens=5000,
-                        temperature=0,
-                        system = sys_anthropic,
-                        messages=cc,
+                        max_tokens=32000,
+                        system = SYSTEM_MESSAGE,
+                        messages=full_prompt,
+                        thinking={"type": "enabled", "budget_tokens": 16000},
                     ) as stream:
                         for chunk_text in stream.text_stream:
                             if chunk_text is not None:
