@@ -1,6 +1,5 @@
 import sys
 import os
-import copy
 from flask import copy_current_request_context, json, Flask, render_template, request, session, jsonify, Response, stream_with_context, send_from_directory
 from openai import OpenAI
 import anthropic
@@ -11,12 +10,22 @@ import logging
 from typing import Generator, Dict
 from datetime import datetime, UTC
 import uuid
+import tkinter as tk
+from tkinter import filedialog
 
+# Initial system message for chatbot
 SYSTEM_MESSAGE = "You are an expert in coding. " \
 "Write code that is clean, efficient, modular, and well-documented. " \
-"Ensure all code block are encased with triple backticks"
+"Ensure all code block are encased with triple backticks."
 
+# Contents of selected files
+global_file_contents = ""
+
+# Initial model name
 model_name = "chatgpt-4o-latest"
+
+# Global variable to store the selected folder path.
+selected_folder = None
 
 # Get command line arguments
 arguments = sys.argv[1:]  # sys.argv[0] is the script name itself.
@@ -202,6 +211,7 @@ def shutdown():
 
 @app.route('/stream', methods=['GET'])
 def stream():
+    global global_file_contents
     global message_accumulate
     global model_name
     try:
@@ -223,6 +233,7 @@ def stream():
         counter = determine_counter(unique_id)
 
         # Append user message to session
+        user_input = user_input + "\n" + global_file_contents
         message_accumulate.append([unique_id, counter, {"role": "user", "content": user_input}])
         conversation_history = get_conversation_history(unique_id, counter)
 
@@ -465,6 +476,100 @@ def select_model() -> Dict[str, str]:
     unique_id = data.get('uniqueId')
     model_name = data.get('selectedModel')
     return jsonify({'status': 'Model reset successfully'})
+
+#####################
+# File Contents Viewer
+#####################
+
+@app.route('/filecontents')
+def filecontents():
+    return render_template('index2.html')
+
+def choose_folder():
+    # Use Tkinter to open a native folder selection dialog.
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window.
+    folder_path = filedialog.askdirectory(title="Select Folder")
+    root.destroy()
+    return folder_path
+
+def get_directory_structure(rootdir):
+    """
+    Recursively builds a directory structure.
+    Each file/directory is represented as a dict.
+    """
+    structure = []
+    try:
+        for item in os.listdir(rootdir):
+            full_path = os.path.join(rootdir, item)
+            if os.path.isdir(full_path):
+                structure.append({
+                    "name": item,
+                    "path": full_path,
+                    "type": "directory",
+                    "children": get_directory_structure(full_path)
+                })
+            else:
+                structure.append({
+                    "name": item,
+                    "path": full_path,
+                    "type": "file"
+                })
+    except Exception as e:
+        print(f"Error reading directory {rootdir}: {e}")
+    return structure
+
+@app.route('/open_folder', methods=['POST'])
+def open_folder():
+    global selected_folder
+    global global_file_contents
+    global_file_contents = ""
+    folder = choose_folder()
+    if folder:
+        selected_folder = folder
+        structure = get_directory_structure(folder)
+        return jsonify({"folder": folder, "structure": structure})
+    else:
+        return jsonify({"error": "No folder selected"}), 400
+
+@app.route('/refresh', methods=['GET'])
+def refresh():
+    global selected_folder
+    global global_file_contents
+    global_file_contents = ""
+    if selected_folder:
+        structure = get_directory_structure(selected_folder)
+        return jsonify({"folder": selected_folder, "structure": structure})
+    else:
+        return jsonify({"error": "No folder selected"}), 400
+
+@app.route('/load_selection', methods=['POST'])
+def load_selection():
+    global selected_folder
+    global global_file_contents
+    data = request.get_json()
+    selected_files = data.get("files", [])
+    result = ""
+    if not selected_folder:
+        return jsonify({"error": "No folder selected"}), 400
+
+    for file in selected_files:
+        # Compute the relative path to the selected folder.
+        try:
+            relative_path = os.path.relpath(file, selected_folder)
+        except Exception as e:
+            relative_path = file  # Fallback to the full path if error occurs.
+        # Read file contents.
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            content = f"Error reading file: {e}"
+        # Append formatted block.
+        result += f"---\n\nFILE: {relative_path}\n\n{content}\n\n"
+    result += "---"
+    global_file_contents = result
+    return jsonify({"result": result})
 
 
 if __name__ == '__main__':
