@@ -27,6 +27,9 @@ model_name = "chatgpt-4o-latest"
 # Global variable to store the selected folder path.
 selected_folder = None
 
+# Flag to indicate if Claude is thinking
+claude_thinking_flag = False
+
 # Get command line arguments
 arguments = sys.argv[1:]  # sys.argv[0] is the script name itself.
 
@@ -157,6 +160,13 @@ def get_token():
     return jsonify({'token': token, 'model_name': model_name})  # Send token as JSON response
 
 
+@app.route('/update-claude-thinking', methods=['POST'])
+def update_claude_thought_state():
+    global claude_thinking_flag
+    data = request.get_json()
+    claude_thinking_flag = data.get('claude_thinking_flag')
+    return jsonify({'status': 'updated', 'value': claude_thinking_flag}), 200
+
 
 # Save Conversation Endpoint
 @app.route('/save', methods=['POST'])
@@ -214,6 +224,7 @@ def stream():
     global global_file_contents
     global message_accumulate
     global model_name
+    global claude_thinking_flag
     try:
         # Get prompt from URL parameters
         user_input = request.args.get('prompt')
@@ -244,6 +255,7 @@ def stream():
         def generate_response(unique_id: str, counter: int, conversation_history: list[Dict]) -> Generator[str, None, None]:
             global message_accumulate
             global model_name
+            global claude_thinking_flag
             collected_chunks = ['\n']
 
             if "gpt" in model_name:
@@ -417,18 +429,32 @@ def stream():
                         )
 
                 try:
-                    with anthropic_client.messages.stream(
-                        model=model_name,
-                        max_tokens=32000,
-                        system = SYSTEM_MESSAGE,
-                        messages=full_prompt,
-                        thinking={"type": "enabled", "budget_tokens": 16000},
-                    ) as stream:
-                        for chunk_text in stream.text_stream:
-                            if chunk_text is not None:
-                                chunk_message = chunk_text
-                                collected_chunks.append(chunk_message)
-                                yield json.dumps({'content': chunk_message}) + "\n"
+                    if (claude_thinking_flag == True):
+                        with anthropic_client.messages.stream(
+                            model=model_name,
+                            max_tokens=32000,
+                            system = SYSTEM_MESSAGE,
+                            messages=full_prompt,
+                            thinking={"type": "enabled", "budget_tokens": 16000},
+                        ) as stream:
+                            for chunk_text in stream.text_stream:
+                                if chunk_text is not None:
+                                    chunk_message = chunk_text
+                                    collected_chunks.append(chunk_message)
+                                    yield json.dumps({'content': chunk_message}) + "\n"
+                    else: 
+
+                        with anthropic_client.messages.stream(
+                            model=model_name,
+                            max_tokens=32000,
+                            system = SYSTEM_MESSAGE,
+                            messages=full_prompt,
+                        ) as stream:
+                            for chunk_text in stream.text_stream:
+                                if chunk_text is not None:
+                                    chunk_message = chunk_text
+                                    collected_chunks.append(chunk_message)
+                                    yield json.dumps({'content': chunk_message}) + "\n"
 
                     # After streaming, append the full bot message to the session
                     bot_message = ''.join(collected_chunks)
