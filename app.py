@@ -18,6 +18,9 @@ SYSTEM_MESSAGE = "You are an expert in coding. " \
 "Write code that is clean, efficient, modular, and well-documented. " \
 "Ensure all code block are encased with triple backticks."
 
+# Global variable to store the loaded conversation messages
+loaded_conversation_messages = []
+
 # Contents of selected files
 global_file_contents = ""
 
@@ -29,6 +32,9 @@ selected_folder = None
 
 # Flag to indicate if Claude is thinking
 claude_thinking_flag = False
+
+# Flag to indicate if a new file is being loaded
+loading_new_file = False
 
 # Get command line arguments
 arguments = sys.argv[1:]  # sys.argv[0] is the script name itself.
@@ -155,8 +161,16 @@ def index() -> str:
 def get_token():
     global message_accumulate
     global model_name
+    global loaded_conversation_messages
+    global loading_new_file
     token = str(uuid.uuid4())
-    message_accumulate.append([token, 1, {"role": "system", "content": SYSTEM_MESSAGE}])
+    if loading_new_file:
+        for dict_msg in loaded_conversation_messages:
+            message_accumulate.append([token, 1, dict_msg])
+    else:
+        message_accumulate.append([token, 1, {"role": "system", "content": SYSTEM_MESSAGE}])
+    loaded_conversation_messages = []
+    loading_new_file = False
     return jsonify({'token': token, 'model_name': model_name})  # Send token as JSON response
 
 
@@ -166,6 +180,33 @@ def update_claude_thought_state():
     data = request.get_json()
     claude_thinking_flag = data.get('claude_thinking_flag')
     return jsonify({'status': 'updated', 'value': claude_thinking_flag}), 200
+
+# Load Conversation Endpoint
+@app.route('/load', methods=['GET'])
+def load_conversation():
+    global loaded_conversation_messages
+    global loading_new_file
+
+    filename = request.args.get('name')
+    if not filename:
+        return jsonify({'error': 'Conversation name is required.'}), 400
+
+    conversation_path = os.path.join(CONVERSATIONS_DIR, f"{filename+'messages'}.json")
+    try:
+        with open(conversation_path, 'r', encoding='utf-8') as f:
+            loaded_conversation_messages = json.load(f)
+    except FileNotFoundError:
+        return jsonify({'error': 'Conversation not found.'}), 404
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Error decoding JSON.'}), 500
+    except Exception as e:
+        logger.info(f"Error loading conversation: {e}")
+        return jsonify({'error': 'Failed to load conversation.'}), 500
+
+    loading_new_file = True
+    return render_template('index.html')
+
+
 
 
 # Save Conversation Endpoint

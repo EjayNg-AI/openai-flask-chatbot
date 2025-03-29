@@ -82,6 +82,16 @@
       /* Prevent buttons from shrinking */
     }
 
+    .load-btn {
+      background-color: #aa4444;
+      color: white;
+    }
+
+    .load-btn:hover {
+      background-color: #dd7777;
+      color: white;
+    }
+
     .save-btn {
       background-color: #000000;
       color: white;
@@ -263,9 +273,9 @@
     <button id="clearscreen-btn" class="button clearscreen-btn">
       Clear Screen
     </button>
+    <button id="load-btn" class="button load-btn">Load</button>
     <button id="save-btn" class="button save-btn">Save</button>
     <button id="reset-btn" class="button reset-btn">Reset</button>
-    <!-- Shutdown Button (for development purposes) -->
     <button id="shutdown-btn" class="button close-btn">Close</button>
   </div>
   <div class="container">
@@ -282,6 +292,7 @@
     const queryInput = document.getElementById("query-input");
     const submitBtn = document.getElementById("submit-btn");
     const clear_scr = document.getElementById("clearscreen-btn");
+    const loadBtn = document.getElementById("load-btn");
     const SaveBtn = document.getElementById("save-btn");
     const closeBtn = document.getElementById("shutdown-btn");
     const resetBtn = document.getElementById("reset-btn");
@@ -324,6 +335,18 @@
       .addEventListener("click", () => {
         window.open("/filecontents", "_blank");
       });
+
+    document.getElementById("load-btn").addEventListener("click", () => {
+      const conversationName = prompt("Enter the conversation name to load:");
+      if (!conversationName) {
+        alert("Conversation name is required.");
+        return;
+      }
+      // Open the /load endpoint with the conversation name as a query parameter in a new tab.
+      window.open(`/load?name=${encodeURIComponent(conversationName)}`, "_blank");
+    });
+
+
 
     // Fetch token from the Flask backend
     fetch("/get-token")
@@ -413,7 +436,6 @@
         alert("Conversation name is required to save.");
         return;
       }
-
       // Proceed to save the conversation
       await saveConversation(conversationName);
     });
