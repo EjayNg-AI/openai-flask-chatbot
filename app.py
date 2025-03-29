@@ -1,8 +1,11 @@
 import sys
 import os
+import base64
 from flask import copy_current_request_context, json, Flask, render_template, request, session, jsonify, Response, stream_with_context, send_from_directory
 from openai import OpenAI
 import anthropic
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from flask_session import Session
 from waitress import serve 
@@ -12,6 +15,7 @@ from datetime import datetime, UTC
 import uuid
 import tkinter as tk
 from tkinter import filedialog
+
 
 # Initial system message for chatbot
 SYSTEM_MESSAGE = "You are an expert in coding. " \
@@ -95,6 +99,20 @@ except Exception as e:
     else:
         logger.info("Anthropic client initialization skipped.")
         anthropic_client = None  # Explicitly set client to None if initialization fails or skipped
+
+# Initialize Gemini client with error handling
+try:
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is not set")
+    gemini_client = genai.Client(api_key=gemini_api_key)
+except Exception as e:
+    if "gemini" in arguments or "google" in arguments:
+        logger.critical(f"Failed to initialize Gemini client: {e}")
+        raise
+    else:
+        logger.info("Gemini client initialization skipped.")
+        gemini_client = None  # Explicitly set client to None if initialization fails or skipped
 
 
 def save_system_messages(timestamp, filename):
@@ -508,6 +526,73 @@ def stream():
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
                     yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
+            
+            elif "gemini" in model_name:
+                # Construct full prompt with system message
+                full_prompt = []
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            types.Content(
+                                role="user",
+                                parts=[
+                                    types.Part.from_text(text=messagedict['content']),
+                                ],
+                            ),
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part.from_text(text=messagedict['content']),
+                                ],
+                            ),
+                        )
+
+                generate_content_config = types.GenerateContentConfig(
+                    temperature=0,
+                    safety_settings=[
+                        types.SafetySetting(
+                            category="HARM_CATEGORY_CIVIC_INTEGRITY",
+                            threshold="OFF",  # Off - Be cautious with safety settings
+                        ),
+                    ],
+                    response_mime_type="text/plain",
+                    system_instruction=[
+                        types.Part.from_text(text=SYSTEM_MESSAGE),
+                    ],
+                )
+
+                try:
+                    # Call Gemini API with conversation history and streaming enabled
+                    stream = gemini_client.models.generate_content_stream(
+                        model=model_name,
+                        contents=full_prompt,
+                        config=generate_content_config,
+                    )
+             
+                    for chunk in stream:
+                        if hasattr(chunk, 'text') and chunk.text:
+                            chunk_message = chunk.text
+                            collected_chunks.append(chunk_message)
+                            ##  chunk_message = chunk_message.replace("\\", "\\\\")
+                            yield json.dumps({'content': chunk_message}) + "\n"
+
+                    # After streaming, append the full bot message to the session
+                    bot_message = ''.join(collected_chunks)
+                    message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
+
+                    # Emit 'done' event to signal completion
+                    yield json.dumps({'message': 'Stream complete'}) + "\n"
+
+        
+                except Exception as e:
+                    logger.error(f"Error in generate_response: {e}", exc_info=True)
+                    yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
+
+            
+            
             else:
                 logger.error("Invalid Model")
                 return jsonify({'error': "Invalid Model"}), 500
