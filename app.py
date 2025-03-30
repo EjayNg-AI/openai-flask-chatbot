@@ -22,6 +22,15 @@ SYSTEM_MESSAGE = "You are an expert in coding. " \
 "Write code that is clean, efficient, modular, and well-documented. " \
 "Ensure all code block are encased with triple backticks."
 
+# Transient global variables
+unique_id_1 = None
+model_name_1 = None
+streaming_flag_1 = False
+counter_1 = 0
+
+# Flag to indicate if conversation should be consolidated
+consolidate_conversation_flag = False
+
 # Global variable to store the loaded conversation messages
 loaded_conversation_messages = []
 
@@ -165,6 +174,7 @@ def get_conversation_history(unique_id, counter):
 @app.route('/')
 def index() -> str:
     global message_accumulate
+    global consolidate_conversation_flag
     if 'messages' not in session:
         session['messages'] = []
     session['messages'].append({
@@ -181,15 +191,31 @@ def get_token():
     global model_name
     global loaded_conversation_messages
     global loading_new_file
+    global consolidate_conversation_flag
+    global unique_id_1
+    global model_name_1
     token = str(uuid.uuid4())
     if loading_new_file:
         for dict_msg in loaded_conversation_messages:
             message_accumulate.append([token, 1, dict_msg])
+    elif consolidate_conversation_flag:
+        counter_1 = determine_counter(unique_id_1)
+        dd = []
+        for dict_msg in message_accumulate:
+            if (dict_msg[0] == unique_id_1) and (dict_msg[1] == counter_1):
+                dd.append(dict_msg[2])
+        for msg in dd:
+            message_accumulate.append([token, 1, msg])
     else:
         message_accumulate.append([token, 1, {"role": "system", "content": SYSTEM_MESSAGE}])
     loaded_conversation_messages = []
     loading_new_file = False
-    return jsonify({'token': token, 'model_name': model_name})  # Send token as JSON response
+    c = consolidate_conversation_flag
+    consolidate_conversation_flag = False
+    return jsonify({'token': token, 
+                    'model_name': model_name,
+                    'consolidate_conversation_flag': c,  
+                    })  # Send token as JSON response
 
 
 @app.route('/update-claude-thinking', methods=['POST'])
@@ -204,6 +230,7 @@ def update_claude_thought_state():
 def load_conversation():
     global loaded_conversation_messages
     global loading_new_file
+    global consolidate_conversation_flag
 
     filename = request.args.get('name')
     if not filename:
@@ -225,6 +252,18 @@ def load_conversation():
     return render_template('index.html')
 
 
+# Consolidate Conversation Endpoint
+@app.route('/consolidate', methods=['GET'])
+def consolidate_conversation():
+    global consolidate_conversation_flag
+    global unique_id_1
+    global model_name_1
+    global streaming_flag_1
+    consolidate_conversation_flag = True
+    unique_id_1 = request.args.get("uniqueId")
+    model_name_1 = request.args.get("model_name")
+    streaming_flag_1 = request.args.get("streaming_flag")
+    return render_template('index.html')
 
 
 # Save Conversation Endpoint

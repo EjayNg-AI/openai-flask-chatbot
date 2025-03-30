@@ -142,6 +142,16 @@
       color: white;
     }
 
+    .consolidate-btn {
+      background-color: #000000;
+      color: white;
+    }
+
+    .consolidate-btn:hover {
+      background-color: #666666;
+      color: white;
+    }
+
     .reset-btn {
       background-color: #f44336;
       color: white;
@@ -266,7 +276,8 @@
         <input type="checkbox" id="claude-thinking" />
         Claude Extended Thinking
       </label></div>
-    <button id="file-viewer-btn" class="file-viewer-btn">File Viewer</button>
+    <div><button id="file-viewer-btn" class="file-viewer-btn">File Viewer</button></div>
+    <div><button id="consolidate-btn" class="consolidate-btn">Consolidate</button></div>
   </div>
 
   <div class="control-panel">
@@ -312,6 +323,8 @@
     let model_name;
     let streaming_flag = true;
     let claude_thinking_flag = false;
+    let consolidate_flag = false;
+    let prompt_consolidate = "Please summarize the conversation so far.";
 
     claudeThinking.addEventListener("change", async () => {
       claude_thinking_flag = claudeThinking.checked;
@@ -338,6 +351,7 @@
         window.open("/filecontents", "_blank");
       });
 
+
     document.getElementById("load-btn").addEventListener("click", () => {
       const conversationName = prompt("Enter the conversation name to load:");
       if (!conversationName) {
@@ -349,6 +363,24 @@
     });
 
 
+    document.getElementById("consolidate-btn").addEventListener("click", () => {
+      // Ensure the required data is present.
+      if (!uniqueId || !model_name || streaming_flag === undefined) {
+        alert("Missing required data.");
+        return;
+      }
+
+      // Build query parameters using URLSearchParams for cleaner code
+      const params = new URLSearchParams({
+        uniqueId: uniqueId,
+        model_name: model_name,
+        streaming_flag: streaming_flag
+      });
+
+      const url = `/consolidate?${params.toString()}`;
+      window.open(url, "_blank");
+    });
+
 
     // Fetch token from the Flask backend
     fetch("/get-token")
@@ -358,6 +390,7 @@
         uniqueId = data.token;
         model_name = data.model_name;
         streaming_flag = !["o1-pro"].includes(model_name);
+        consolidate_flag = data.consolidate_conversation_flag;
 
         // Append the token to the markdown input value if markdownInput exists
         if (markdownInput) {
@@ -368,6 +401,10 @@
           SaveBtn.disabled = false;
           choose_model.disabled = false;
           clear_scr.disabled = false;
+        }
+        if (consolidate_flag) {
+          queryInput.value = prompt_consolidate;
+          consolidate_flag = false;
         }
       })
       .catch((error) => {
