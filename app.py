@@ -28,6 +28,9 @@ model_name_1 = None
 streaming_flag_1 = False
 counter_1 = 0
 
+# Option corresponding to consolidation of conversation
+selected_option_consolidate = "fully_updated"
+
 # Flag to indicate if conversation should be consolidated
 consolidate_conversation_flag = False
 
@@ -192,6 +195,7 @@ def get_token():
     global loaded_conversation_messages
     global loading_new_file
     global consolidate_conversation_flag
+    global selected_option_consolidate
     global unique_id_1
     global model_name_1
     token = str(uuid.uuid4())
@@ -215,6 +219,7 @@ def get_token():
     return jsonify({'token': token, 
                     'model_name': model_name,
                     'consolidate_conversation_flag': c,  
+                    'consolidate_option': selected_option_consolidate,
                     })  # Send token as JSON response
 
 
@@ -259,11 +264,14 @@ def consolidate_conversation():
     global unique_id_1
     global model_name_1
     global streaming_flag_1
+    global selected_option_consolidate
     consolidate_conversation_flag = True
     unique_id_1 = request.args.get("uniqueId")
     model_name_1 = request.args.get("model_name")
     streaming_flag_1 = request.args.get("streaming_flag")
+    selected_option_consolidate = request.args.get("option", "fully_updated")
     return render_template('index.html')
+
 
 
 # Save Conversation Endpoint
@@ -684,11 +692,12 @@ def choose_folder():
     root.destroy()
     return folder_path
 
+"""
 def get_directory_structure(rootdir):
-    """
-    Recursively builds a directory structure.
-    Each file/directory is represented as a dict.
-    """
+    # 
+    #Recursively builds a directory structure.
+    #Each file/directory is represented as a dict.
+    # 
     structure = []
     try:
         for item in os.listdir(rootdir):
@@ -709,6 +718,43 @@ def get_directory_structure(rootdir):
     except Exception as e:
         print(f"Error reading directory {rootdir}: {e}")
     return structure
+"""
+
+
+def get_directory_structure(rootdir):
+    """
+    Recursively builds a directory structure.
+    Only includes files with specific extensions.
+    """
+    allowed_extensions = {'.html', '.htm', '.php', '.js', '.css', '.py', '.json', '.ipynb'}
+    structure = []
+
+    try:
+        for item in os.listdir(rootdir):
+            full_path = os.path.join(rootdir, item)
+            if os.path.isdir(full_path):
+                children = get_directory_structure(full_path)
+                if children:  # Only include directories that have valid children
+                    structure.append({
+                        "name": item,
+                        "path": full_path,
+                        "type": "directory",
+                        "children": children
+                    })
+            else:
+                _, ext = os.path.splitext(item)
+                if ext.lower() in allowed_extensions:
+                    structure.append({
+                        "name": item,
+                        "path": full_path,
+                        "type": "file"
+                    })
+    except Exception as e:
+        print(f"Error reading directory {rootdir}: {e}")
+
+    return structure
+
+
 
 @app.route('/open_folder', methods=['POST'])
 def open_folder():

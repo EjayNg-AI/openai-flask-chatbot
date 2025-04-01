@@ -1,761 +1,837 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chatbot powered by OpenAI</title>
-
-  <script>
-    window.MathJax = {
-      tex: {
-        inlineMath: [
-          ["$", "$"],
-          ["\\(", "\\)"],
-        ],
-        displayMath: [
-          ["$$", "$$"],
-          ["\\[", "\\]"],
-        ],
-      },
-      options: {
-        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
-      },
-    };
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
-
-  <style>
-    body {
-      font-family: "Roboto", sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    .control-panel {
-      display: flex;
-      gap: 10px;
-      padding: 20px;
-      background-color: #f0f0f0;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .query-input {
-      font-size: 16px;
-      flex: 1;
-      /* Take up available horizontal space */
-      resize: none;
-      /* Disable manual resizing */
-      line-height: 1.2;
-      min-height: 10px;
-      /* Approx. 1 line */
-      max-height: 100px;
-      /* Approx. 10 lines */
-      overflow-y: auto;
-      /* Show scrollbar when content exceeds max-height */
-      transition: height 0.2s ease;
-      padding: 2.3px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-
-    .button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      width: 120px;
-      /* Fixed width */
-      height: 60px;
-      /* Fixed height */
-      flex-shrink: 0;
-      /* Prevent buttons from shrinking */
-    }
-
-    .load-btn {
-      background-color: #aa4444;
-      color: white;
-    }
-
-    .load-btn:hover {
-      background-color: #dd7777;
-      color: white;
-    }
-
-    .save-btn {
-      background-color: #000000;
-      color: white;
-    }
-
-    .save-btn:hover {
-      background-color: #666666;
-      color: white;
-    }
-
-    .submit-btn {
-      background-color: #4caf50;
-      color: white;
-    }
-
-    .submit-btn:hover {
-      background-color: #45df49;
-      color: white;
-    }
-
-    .clearscreen-btn {
-      background-color: #550055;
-      color: white;
-    }
-
-    .clearscreen-btn:hover {
-      background-color: #990099;
-      color: white;
-    }
-
-    .close-btn {
-      background-color: #0000aa;
-      color: white;
-    }
-
-    .close-btn:hover {
-      background-color: #0055ff;
-      color: white;
-    }
-
-    .file-viewer-btn {
-      background-color: #aa0044;
-      color: white;
-    }
-
-    .file-viewer-btn:hover {
-      background-color: #cc0066;
-      color: white;
-    }
-
-    .consolidate-btn {
-      background-color: #000000;
-      color: white;
-    }
-
-    .consolidate-btn:hover {
-      background-color: #666666;
-      color: white;
-    }
-
-    .reset-btn {
-      background-color: #f44336;
-      color: white;
-    }
-
-    .reset-btn:hover {
-      background-color: #ff0099;
-      color: white;
-    }
-
-    .conversation-turn {
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .query-container {
-      padding: 20px;
-      background-color: #f0f0f0;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .editor,
-    .preview {
-      width: 50%;
-      padding: 20px;
-      box-sizing: border-box;
-      overflow: auto;
-    }
-
-    .editor {
-      border-right: 1px solid #ddd;
-      background-color: #f9f9f9;
-    }
-
-    #markdown-input {
-      width: 100%;
-      height: 100%;
-      resize: none;
-      border: none;
-      outline: none;
-      font-size: 16px;
-      font-family: "Courier New", Courier, monospace;
-    }
-
-    .preview {
-      background-color: #fff;
-    }
-
-    pre {
-      position: relative;
-      background-color: #f0f0f0;
-      padding: 15px;
-      overflow: auto;
-      border-radius: 5px;
-    }
-
-    pre button.copy-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: #4caf50;
-      border: none;
-      color: white;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-
-    blockquote {
-      border-left: 5px solid #ccc;
-      padding-left: 15px;
-      color: #666;
-      margin: 1em 0;
-    }
-
-    .model-controls {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 5px;
-      background-color: #ffffff;
-      border-bottom: 1px solid #000000;
-    }
-
-    .model-controls .drop-down-menu {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="model-controls">
-    <div class="drop-down-menu">
-      <form>
-        <label for="language-model">Select Language Model:</label>
-        <select id="language-model">
-          <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
-          <option value="gpt-4o">gpt-4o</option>
-          <option value="gpt-4.5-preview">gpt-4.5-preview</option>
-          <option value="o1-pro">o1-pro</option>
-          <option value="o1">o1</option>
-          <option value="o3-mini">o3-mini</option>
-          <option value="claude-3-7-sonnet-20250219">claude-3-7-sonnet-20250219</option>
-          <option value="gemini-2.0-flash-thinking-exp-01-21">gemini-2.0-flash-thinking-exp-01-21</option>
-          <option value="gemini-2.5-pro-exp-03-25">gemini-2.5-pro-exp-03-25</option>
-        </select>
-      </form>
-      <button id="model_choice">Select Model</button>
-
-    </div>
-    <div> <label style="margin-left: 10px;">
-        <input type="checkbox" id="claude-thinking" />
-        Claude Extended Thinking
-      </label></div>
-    <div><button id="file-viewer-btn" class="file-viewer-btn">File Viewer</button></div>
-    <div><button id="consolidate-btn" class="consolidate-btn">Consolidate</button></div>
-  </div>
-
-  <div class="control-panel">
-    <textarea type="text" id="query-input" class="query-input" placeholder="Enter your question..."></textarea>
-    <button id="submit-btn" class="button submit-btn">Submit</button>
-    <button id="clearscreen-btn" class="button clearscreen-btn">
-      Clear Screen
-    </button>
-    <button id="load-btn" class="button load-btn">Load</button>
-    <button id="save-btn" class="button save-btn">Save</button>
-    <button id="reset-btn" class="button reset-btn">Reset</button>
-    <button id="shutdown-btn" class="button close-btn">Close</button>
-  </div>
-  <div class="container">
-    <div class="editor">
-      <textarea id="markdown-input" readonly></textarea>
-    </div>
-    <div class="preview" id="preview"></div>
-  </div>
-
-  <script>
-    hljs.highlightAll();
-
-    const dropdown_menu = document.getElementById("language-model");
-    const queryInput = document.getElementById("query-input");
-    const submitBtn = document.getElementById("submit-btn");
-    const clear_scr = document.getElementById("clearscreen-btn");
-    const loadBtn = document.getElementById("load-btn");
-    const SaveBtn = document.getElementById("save-btn");
-    const closeBtn = document.getElementById("shutdown-btn");
-    const resetBtn = document.getElementById("reset-btn");
-    const markdownInput = document.getElementById("markdown-input");
-    const preview = document.getElementById("preview");
-    const choose_model = document.getElementById("model_choice");
-    const claudeThinking = document.getElementById("claude-thinking");
-
-    submitBtn.disabled = true;
-    SaveBtn.disabled = true;
-    choose_model.disabled = true;
-    clear_scr.disabled = true;
-
-    let uniqueId;
-    let model_name;
-    let streaming_flag = true;
-    let claude_thinking_flag = false;
-    let consolidate_flag = false;
-    let prompt_consolidate = "Please summarize the conversation so far.";
-
-    claudeThinking.addEventListener("change", async () => {
-      claude_thinking_flag = claudeThinking.checked;
-      // Send to backend
-      try {
-        await fetch("/update-claude-thinking", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ claude_thinking_flag: claude_thinking_flag })
-        });
-        if (markdownInput) {
-          markdownInput.value += `\n Claude Extended Thinking: ${claude_thinking_flag} \n`;
-        }
-      } catch (err) {
-        console.error("Failed to update backend:", err);
-      }
-    });
-
-    document
-      .getElementById("file-viewer-btn")
-      .addEventListener("click", () => {
-        window.open("/filecontents", "_blank");
-      });
-
-
-    document.getElementById("load-btn").addEventListener("click", () => {
-      const conversationName = prompt("Enter the conversation name to load:");
-      if (!conversationName) {
-        alert("Conversation name is required.");
-        return;
-      }
-      // Open the /load endpoint with the conversation name as a query parameter in a new tab.
-      window.open(`/load?name=${encodeURIComponent(conversationName)}`, "_blank");
-    });
-
-
-    document.getElementById("consolidate-btn").addEventListener("click", () => {
-      // Ensure the required data is present.
-      if (!uniqueId || !model_name || streaming_flag === undefined) {
-        alert("Missing required data.");
-        return;
-      }
-
-      // Build query parameters using URLSearchParams for cleaner code
-      const params = new URLSearchParams({
-        uniqueId: uniqueId,
-        model_name: model_name,
-        streaming_flag: streaming_flag
-      });
-
-      const url = `/consolidate?${params.toString()}`;
-      window.open(url, "_blank");
-    });
-
-
-    // Fetch token from the Flask backend
-    fetch("/get-token")
-      .then((response) => response.json())
-      .then((data) => {
-        // Set the global uniqueId
-        uniqueId = data.token;
-        model_name = data.model_name;
-        streaming_flag = !["o1-pro"].includes(model_name);
-        consolidate_flag = data.consolidate_conversation_flag;
-
-        // Append the token to the markdown input value if markdownInput exists
-        if (markdownInput) {
-          markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
-          markdownInput.value += `\n Model: ${model_name} \n`;
-          markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
-          submitBtn.disabled = false;
-          SaveBtn.disabled = false;
-          choose_model.disabled = false;
-          clear_scr.disabled = false;
-        }
-        if (consolidate_flag) {
-          queryInput.value = prompt_consolidate;
-          consolidate_flag = false;
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching token:", error);
-      });
-
-    clear_scr.addEventListener("click", async () => {
-      queryInput.value = "";
-      autoResize();
-      preview.innerHTML = "";
-      markdownInput.value = "";
-    });
-
-    choose_model.addEventListener("click", async () => {
-      selectedModel = dropdown_menu.value;
-      model_name = selectedModel;
-      try {
-        const response = await fetch("/select_model", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            uniqueId: uniqueId,
-            selectedModel: selectedModel,
-          }),
-        });
-
-        if (response.ok) {
-          streaming_flag = !["o1-pro"].includes(model_name);
-          markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
-          markdownInput.value += `\n Model: ${model_name} \n`;
-          markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
-          queryInput.value = "";
-          renderMarkdown((renderMath = true));
-          autoResize();
-        } else {
-          console.error("Failed to choose model");
-        }
-      } catch (error) {
-        console.error("Error choosing model:", error);
-      }
-    });
-
-    // Auto-resize Function
-    function autoResize() {
-      queryInput.style.height = "auto"; // Reset height
-      const scrollHeight = queryInput.scrollHeight;
-      const maxHeight = 150; // Should match CSS max-height
-      if (scrollHeight < maxHeight) {
-        queryInput.style.height = scrollHeight + "px";
-      } else {
-        queryInput.style.height = maxHeight + "px";
-      }
-    }
-
-    // Initial Resize
-    autoResize();
-
-    // Event Listener for Input
-    queryInput.addEventListener("input", autoResize);
-
-    SaveBtn.addEventListener("click", async () => {
-      queryInput.value = "";
-      autoResize();
-      const conversationName = prompt("Enter a name for your conversation:");
-      if (!conversationName) {
-        alert("Conversation name is required to save.");
-        return;
-      }
-      // Proceed to save the conversation
-      await saveConversation(conversationName);
-    });
-
-    async function saveConversation(conversationName) {
-      try {
-        // Collect the markdown content from the editor
-        const markdownContent = markdownInput.value;
-
-        // Send POST request to the backend
-        const response = await fetch("/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            uniqueId: uniqueId,
-            name: conversationName,
-            content: markdownContent,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          alert("Conversation saved successfully!");
-        } else {
-          alert(
-            `Failed to save conversation: ${result.error || "Unknown error"}`
-          );
-        }
-      } catch (error) {
-        console.error("Error saving conversation:", error);
-        alert("An error occurred while saving the conversation.");
-      }
-    }
-
-    closeBtn.addEventListener("click", async () => {
-      queryInput.value = "";
-      autoResize();
-
-      preview.innerHTML = "";
-      markdownInput.value = "";
-
-      fetch("/shutdown", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot powered by OpenAI</title>
+
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
         },
-        body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-        }),
-      })
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
+        },
+      };
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .control-panel {
+        display: flex;
+        gap: 10px;
+        padding: 20px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .query-input {
+        font-size: 16px;
+        flex: 1;
+        /* Take up available horizontal space */
+        resize: none;
+        /* Disable manual resizing */
+        line-height: 1.2;
+        min-height: 10px;
+        /* Approx. 1 line */
+        max-height: 100px;
+        /* Approx. 10 lines */
+        overflow-y: auto;
+        /* Show scrollbar when content exceeds max-height */
+        transition: height 0.2s ease;
+        padding: 2.3px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 120px;
+        /* Fixed width */
+        height: 60px;
+        /* Fixed height */
+        flex-shrink: 0;
+        /* Prevent buttons from shrinking */
+      }
+
+      .load-btn {
+        background-color: #aa4444;
+        color: white;
+      }
+
+      .load-btn:hover {
+        background-color: #dd7777;
+        color: white;
+      }
+
+      .save-btn {
+        background-color: #000000;
+        color: white;
+      }
+
+      .save-btn:hover {
+        background-color: #666666;
+        color: white;
+      }
+
+      .submit-btn {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .submit-btn:hover {
+        background-color: #45df49;
+        color: white;
+      }
+
+      .clearscreen-btn {
+        background-color: #550055;
+        color: white;
+      }
+
+      .clearscreen-btn:hover {
+        background-color: #990099;
+        color: white;
+      }
+
+      .close-btn {
+        background-color: #0000aa;
+        color: white;
+      }
+
+      .close-btn:hover {
+        background-color: #0055ff;
+        color: white;
+      }
+
+      .file-viewer-btn {
+        background-color: #aa0044;
+        color: white;
+      }
+
+      .file-viewer-btn:hover {
+        background-color: #cc0066;
+        color: white;
+      }
+
+      .consolidate-btn {
+        background-color: #000000;
+        color: white;
+      }
+
+      .consolidate-btn:hover {
+        background-color: #666666;
+        color: white;
+      }
+
+      .reset-btn {
+        background-color: #f44336;
+        color: white;
+      }
+
+      .reset-btn:hover {
+        background-color: #ff0099;
+        color: white;
+      }
+
+      .conversation-turn {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .query-container {
+        padding: 20px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .editor,
+      .preview {
+        width: 50%;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow: auto;
+      }
+
+      .editor {
+        border-right: 1px solid #ddd;
+        background-color: #f9f9f9;
+      }
+
+      #markdown-input {
+        width: 100%;
+        height: 100%;
+        resize: none;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        font-family: "Courier New", Courier, monospace;
+      }
+
+      .preview {
+        background-color: #fff;
+      }
+
+      pre {
+        position: relative;
+        background-color: #f0f0f0;
+        padding: 15px;
+        overflow: auto;
+        border-radius: 5px;
+      }
+
+      pre button.copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+
+      blockquote {
+        border-left: 5px solid #ccc;
+        padding-left: 15px;
+        color: #666;
+        margin: 1em 0;
+      }
+
+      .model-controls {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px;
+        background-color: #ffffff;
+        border-bottom: 1px solid #000000;
+      }
+
+      .model-controls .drop-down-menu {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="model-controls">
+      <div class="drop-down-menu">
+        <form>
+          <label for="language-model">Select Language Model:</label>
+          <select id="language-model">
+            <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
+            <option value="gpt-4o">gpt-4o</option>
+            <option value="gpt-4.5-preview">gpt-4.5-preview</option>
+            <option value="o1-pro">o1-pro</option>
+            <option value="o1">o1</option>
+            <option value="o3-mini">o3-mini</option>
+            <option value="claude-3-7-sonnet-20250219">
+              claude-3-7-sonnet-20250219
+            </option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21">
+              gemini-2.0-flash-thinking-exp-01-21
+            </option>
+            <option value="gemini-2.5-pro-exp-03-25">
+              gemini-2.5-pro-exp-03-25
+            </option>
+          </select>
+        </form>
+        <button id="model_choice">Select Model</button>
+      </div>
+      <div>
+        <label style="margin-left: 10px">
+          <input type="checkbox" id="claude-thinking" />
+          Claude Extended Thinking
+        </label>
+      </div>
+      <div>
+        <button id="file-viewer-btn" class="file-viewer-btn">
+          File Viewer
+        </button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 5px">
+        <button id="consolidate-btn" class="consolidate-btn">
+          Consolidate
+        </button>
+        <select id="consolidate-option" style="height: 30px; font-size: 14px">
+          <option value="fully_updated">Fully Updated Files</option>
+          <option value="refactor">Refactor Code</option>
+          <option value="critique">Critique Code</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <textarea
+        type="text"
+        id="query-input"
+        class="query-input"
+        placeholder="Enter your question..."
+      ></textarea>
+      <button id="submit-btn" class="button submit-btn">Submit</button>
+      <button id="clearscreen-btn" class="button clearscreen-btn">
+        Clear Screen
+      </button>
+      <button id="load-btn" class="button load-btn">Load</button>
+      <button id="save-btn" class="button save-btn">Save</button>
+      <button id="reset-btn" class="button reset-btn">Reset</button>
+      <button id="shutdown-btn" class="button close-btn">Close</button>
+    </div>
+    <div class="container">
+      <div class="editor">
+        <textarea id="markdown-input" readonly></textarea>
+      </div>
+      <div class="preview" id="preview"></div>
+    </div>
+
+    <script>
+      hljs.highlightAll();
+
+      const dropdown_menu = document.getElementById("language-model");
+      const queryInput = document.getElementById("query-input");
+      const submitBtn = document.getElementById("submit-btn");
+      const clear_scr = document.getElementById("clearscreen-btn");
+      const loadBtn = document.getElementById("load-btn");
+      const SaveBtn = document.getElementById("save-btn");
+      const closeBtn = document.getElementById("shutdown-btn");
+      const resetBtn = document.getElementById("reset-btn");
+      const markdownInput = document.getElementById("markdown-input");
+      const preview = document.getElementById("preview");
+      const choose_model = document.getElementById("model_choice");
+      const claudeThinking = document.getElementById("claude-thinking");
+
+      submitBtn.disabled = true;
+      SaveBtn.disabled = true;
+      choose_model.disabled = true;
+      clear_scr.disabled = true;
+
+      let uniqueId;
+      let model_name;
+      let streaming_flag = true;
+      let claude_thinking_flag = false;
+      let consolidate_flag = false;
+      let consolidate_option = "fully_updated";
+      let prompt_consolidate =
+        "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
+
+      let refactoringPrompt = `
+Objective: Refactor and clean up the existing codebase to improve its readability, maintainability, and modularity **without altering any existing functionality or user experience**.
+
+Strict Constraints:
+1. Do not introduce any changes in logic, business rules, or user-facing behavior.
+2. Preserve exact input/output behavior, side-effects, UI layout/flow, and performance characteristics (within a negligible margin).
+3. Do not remove or simplify code that appears redundant unless it has *zero* effect on behavior and is *provably unreachable or unnecessary*.
+
+Goals of Refactoring:
+- Improve structure, clarity, and cohesion of the codebase.
+- Reduce deeply nested logic, excessive coupling, and repetition.
+- Apply standard best practices (e.g., DRY, SRP, consistent naming, modularization).
+- Introduce helper functions, configuration files, or abstractions only if they increase clarity.
+- Document public interfaces, key functions, and assumptions where lacking.
+
+Code Coverage & Testing:
+- All changes must be accompanied by unit or integration tests where possible.
+- Validate that test results remain unchanged post-refactor. If no test suite exists, assist in generating regression tests from current behavior.
+
+Deliverables:
+- Refactored code with in-line comments on major changes or restructuring decisions.
+- A summary of the changes, including files touched, functions moved/extracted, patterns replaced, and any identified anti-patterns.
+- (Optional) A cleanup roadmap for future maintainability and architectural improvements.
+
+Output:
+- Output one refactored file at a time, including the original file name and a summary of changes, recommendations and other notes.
+- Prompt the user to confirm the changes before proceeding to the next file.
+`;
+
+      claudeThinking.addEventListener("change", async () => {
+        claude_thinking_flag = claudeThinking.checked;
+        // Send to backend
+        try {
+          await fetch("/update-claude-thinking", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              claude_thinking_flag: claude_thinking_flag,
+            }),
+          });
+          if (markdownInput) {
+            markdownInput.value += `\n Claude Extended Thinking: ${claude_thinking_flag} \n`;
+          }
+        } catch (err) {
+          console.error("Failed to update backend:", err);
+        }
+      });
+
+      document
+        .getElementById("file-viewer-btn")
+        .addEventListener("click", () => {
+          window.open("/filecontents", "_blank");
+        });
+
+      document.getElementById("load-btn").addEventListener("click", () => {
+        const conversationName = prompt("Enter the conversation name to load:");
+        if (!conversationName) {
+          alert("Conversation name is required.");
+          return;
+        }
+        // Open the /load endpoint with the conversation name as a query parameter in a new tab.
+        window.open(
+          `/load?name=${encodeURIComponent(conversationName)}`,
+          "_blank"
+        );
+      });
+
+      document
+        .getElementById("consolidate-btn")
+        .addEventListener("click", () => {
+          const consolidateOption =
+            document.getElementById("consolidate-option").value;
+
+          if (!uniqueId || !model_name || streaming_flag === undefined) {
+            alert("Missing required data.");
+            return;
+          }
+
+          const params = new URLSearchParams({
+            uniqueId: uniqueId,
+            model_name: model_name,
+            streaming_flag: streaming_flag,
+            option: consolidateOption,
+          });
+
+          const url = `/consolidate?${params.toString()}`;
+          window.open(url, "_blank");
+        });
+
+      // Fetch token from the Flask backend
+      fetch("/get-token")
         .then((response) => response.json())
         .then((data) => {
-          if (data.message) {
-            alert(data.message);
-          } else if (data.error) {
-            alert(`Error: ${data.error}`);
+          // Set the global uniqueId
+          uniqueId = data.token;
+          model_name = data.model_name;
+          streaming_flag = !["o1-pro"].includes(model_name);
+          consolidate_flag = data.consolidate_conversation_flag;
+          consolidate_option = data.consolidate_option;
+
+          // Append the token to the markdown input value if markdownInput exists
+          if (markdownInput) {
+            markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+            markdownInput.value += `\n Model: ${model_name} \n`;
+            markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
+            submitBtn.disabled = false;
+            SaveBtn.disabled = false;
+            choose_model.disabled = false;
+            clear_scr.disabled = false;
+          }
+          if (consolidate_flag) {
+            if (consolidate_option === "fully_updated") {
+              queryInput.value =
+                "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
+            } else if (consolidate_option === "refactor") {
+              queryInput.value = refactoringPrompt;
+            } else if (consolidate_option === "critique") {
+              queryInput.value =
+                "Examine the attached project code files and provide a detailed critique of the code, including suggestions for improvements, potential issues, and best practices. Focus on code quality, readability, and maintainability.";
+            }
+
+            consolidate_flag = false;
           }
         })
         .catch((error) => {
-          console.error("Error:", error);
+          console.error("Error fetching token:", error);
         });
-    });
 
-    let renderTimeout;
-
-    function renderMarkdown(renderMath = false) {
-      clearTimeout(renderTimeout);
-
-      let markdownText = markdownInput.value;
-
-      marked.setOptions({
-        breaks: true,
-        highlight: function (code, lang) {
-          if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-          } else {
-            return hljs.highlightAuto(code).value;
-          }
-        },
+      clear_scr.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+        preview.innerHTML = "";
+        markdownInput.value = "";
       });
-      let html = marked.parse(markdownText);
-      preview.innerHTML = html;
-      addCopyButtons();
 
-      if (renderMath) {
-        renderTimeout = setTimeout(() => {
-          renderMathJax();
-        }, 500); // 500ms delay
-      }
-    }
+      choose_model.addEventListener("click", async () => {
+        selectedModel = dropdown_menu.value;
+        model_name = selectedModel;
+        try {
+          const response = await fetch("/select_model", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              selectedModel: selectedModel,
+            }),
+          });
 
-    function addCopyButtons() {
-      const codeBlocks = preview.querySelectorAll("pre");
-      codeBlocks.forEach((pre) => {
-        if (!pre.querySelector("button.copy-btn")) {
-          const button = document.createElement("button");
-          button.className = "copy-btn";
-          button.innerText = "Copy";
-          button.onclick = () => {
-            const code = pre.querySelector("code").innerText;
-            navigator.clipboard
-              .writeText(code)
-              .then(() => {
-                button.innerText = "Copied!";
-                setTimeout(() => {
-                  button.innerText = "Copy";
-                }, 2000);
-              })
-              .catch((err) => {
-                console.error("Failed to copy: ", err);
-              });
-          };
-          pre.appendChild(button);
+          if (response.ok) {
+            streaming_flag = !["o1-pro"].includes(model_name);
+            markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
+            markdownInput.value += `\n Model: ${model_name} \n`;
+            markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
+            queryInput.value = "";
+            renderMarkdown((renderMath = true));
+            autoResize();
+          } else {
+            console.error("Failed to choose model");
+          }
+        } catch (error) {
+          console.error("Error choosing model:", error);
         }
       });
-    }
 
-    function renderMathJax() {
-      if (window.MathJax) {
-        MathJax.typesetPromise([preview]).catch(function (err) {
-          console.error("MathJax typeset failed: " + err.message);
-        });
+      // Auto-resize Function
+      function autoResize() {
+        queryInput.style.height = "auto"; // Reset height
+        const scrollHeight = queryInput.scrollHeight;
+        const maxHeight = 150; // Should match CSS max-height
+        if (scrollHeight < maxHeight) {
+          queryInput.style.height = scrollHeight + "px";
+        } else {
+          queryInput.style.height = maxHeight + "px";
+        }
       }
-    }
 
-    function appendConversationTurn(userQuery) {
-      markdownInput.value += `\n\n**Model:** ${model_name} \n\n**Assistant:** \n\n`;
-      renderMarkdown();
-    }
-
-    submitBtn.addEventListener("click", async () => {
-      const query = queryInput.value.trim();
-      if (!query) return;
-
-      queryInput.value = "";
+      // Initial Resize
       autoResize();
-      submitBtn.disabled = true;
-      appendConversationTurn(query);
 
-      let isMathRendered = false;
+      // Event Listener for Input
+      queryInput.addEventListener("input", autoResize);
 
-      const url = `/stream?prompt=${encodeURIComponent(
-        query
-      )}&uniqueId=${encodeURIComponent(
-        uniqueId
-      )}&modelname=${encodeURIComponent(model_name)}`;
-
-      if (streaming_flag) {
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Network error: ${response.statusText}`);
-          }
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          let buffer = "";
-          let done = false;
-
-          while (!done) {
-            const { value, done: doneReading } = await reader.read();
-            done = doneReading;
-            // Accumulate the stream text
-            buffer += decoder.decode(value, { stream: true });
-
-            // Split into lines (each line should be a complete JSON string)
-            let lines = buffer.split("\n");
-            // Keep any incomplete line in the buffer
-            buffer = lines.pop();
-
-            for (const line of lines) {
-              if (line.trim()) {
-                try {
-                  // Parse the JSON object from the line
-                  const parsed = JSON.parse(line);
-                  if (parsed.content) {
-                    // Escape backslashes: replace "\" with "\\"
-                    const escapedContent = parsed.content.replace(
-                      /\\/g,
-                      "\\\\"
-                    );
-                    // Append only the escaped content to the Editor
-                    markdownInput.value += escapedContent;
-                  }
-                  // Optionally, handle a "stream complete" message if needed:
-                  // if (parsed.message === 'Stream complete') { ... }
-                } catch (err) {
-                  console.error("Error parsing JSON:", err);
-                }
-              }
-            }
-            // Scroll the Editor to the bottom for the latest content
-            markdownInput.scrollTop = markdownInput.scrollHeight;
-          }
-
-          // Once the stream is complete, update the Preview pane.
-          if (!isMathRendered) {
-            // Render the final markdown content to update the preview.
-            renderMarkdown(true);
-            isMathRendered = true;
-          }
-          submitBtn.disabled = false;
-        } catch (error) {
-          console.error("Streaming error:", error);
-          submitBtn.disabled = false;
-          alert(
-            "An error occurred while streaming the response. Please try again."
-          );
+      SaveBtn.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+        const conversationName = prompt("Enter a name for your conversation:");
+        if (!conversationName) {
+          alert("Conversation name is required to save.");
+          return;
         }
-      } else {
+        // Proceed to save the conversation
+        await saveConversation(conversationName);
+      });
+
+      async function saveConversation(conversationName) {
         try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Network error: ${response.statusText}`);
-          }
+          // Collect the markdown content from the editor
+          const markdownContent = markdownInput.value;
+
+          // Send POST request to the backend
+          const response = await fetch("/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              name: conversationName,
+              content: markdownContent,
+            }),
+          });
+
           const result = await response.json();
-          if (result.content) {
-            markdownInput.value += result.content;
+
+          if (response.ok) {
+            alert("Conversation saved successfully!");
           } else {
-            alert(result.error || "Unexpected error");
+            alert(
+              `Failed to save conversation: ${result.error || "Unknown error"}`
+            );
           }
-          // Scroll the Editor to the bottom for the latest content
-          markdownInput.scrollTop = markdownInput.scrollHeight;
-          if (!isMathRendered) {
-            // Render the final markdown content to update the preview.
-            renderMarkdown(true);
-            isMathRendered = true;
-          }
-          submitBtn.disabled = false;
         } catch (error) {
-          console.error("Non-streaming error:", error);
-          submitBtn.disabled = false;
-          alert("An error occurred. Please try again.");
+          console.error("Error saving conversation:", error);
+          alert("An error occurred while saving the conversation.");
         }
       }
-    });
 
-    resetBtn.addEventListener("click", async () => {
-      try {
-        const response = await fetch("/reset", {
+      closeBtn.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+
+        preview.innerHTML = "";
+        markdownInput.value = "";
+
+        fetch("/shutdown", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uniqueId: uniqueId,
+            timestamp: new Date().toISOString(),
           }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            } else if (data.error) {
+              alert(`Error: ${data.error}`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      });
+
+      let renderTimeout;
+
+      function renderMarkdown(renderMath = false) {
+        clearTimeout(renderTimeout);
+
+        let markdownText = markdownInput.value;
+
+        marked.setOptions({
+          breaks: true,
+          highlight: function (code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+              return hljs.highlight(code, { language: lang }).value;
+            } else {
+              return hljs.highlightAuto(code).value;
+            }
+          },
         });
+        let html = marked.parse(markdownText);
+        preview.innerHTML = html;
+        addCopyButtons();
 
-        if (response.ok) {
-          markdownInput.value = "";
-          preview.innerHTML = "";
-          queryInput.value = "";
-          markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
-          markdownInput.value += `\n Model: ${model_name} \n`;
-          renderMarkdown();
-          autoResize();
-        } else {
-          console.error("Failed to reset conversation");
+        if (renderMath) {
+          renderTimeout = setTimeout(() => {
+            renderMathJax();
+          }, 500); // 500ms delay
         }
-      } catch (error) {
-        console.error("Error resetting conversation:", error);
       }
-    });
 
-    queryInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        if (e.ctrlKey) {
-          // Ctrl + Enter: Submit the message
-          e.preventDefault(); // Prevent newline insertion
-          if (submitBtn && !submitBtn.disabled) {
-            submitBtn.click(); // Trigger send button if it's enabled
+      function addCopyButtons() {
+        const codeBlocks = preview.querySelectorAll("pre");
+        codeBlocks.forEach((pre) => {
+          if (!pre.querySelector("button.copy-btn")) {
+            const button = document.createElement("button");
+            button.className = "copy-btn";
+            button.innerText = "Copy";
+            button.onclick = () => {
+              const code = pre.querySelector("code").innerText;
+              navigator.clipboard
+                .writeText(code)
+                .then(() => {
+                  button.innerText = "Copied!";
+                  setTimeout(() => {
+                    button.innerText = "Copy";
+                  }, 2000);
+                })
+                .catch((err) => {
+                  console.error("Failed to copy: ", err);
+                });
+            };
+            pre.appendChild(button);
+          }
+        });
+      }
+
+      function renderMathJax() {
+        if (window.MathJax) {
+          MathJax.typesetPromise([preview]).catch(function (err) {
+            console.error("MathJax typeset failed: " + err.message);
+          });
+        }
+      }
+
+      function appendConversationTurn(userQuery) {
+        markdownInput.value += `\n\n**Model:** ${model_name} \n\n**Assistant:** \n\n`;
+        renderMarkdown();
+      }
+
+      submitBtn.addEventListener("click", async () => {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        queryInput.value = "";
+        autoResize();
+        submitBtn.disabled = true;
+        appendConversationTurn(query);
+
+        let isMathRendered = false;
+
+        const url = `/stream?prompt=${encodeURIComponent(
+          query
+        )}&uniqueId=${encodeURIComponent(
+          uniqueId
+        )}&modelname=${encodeURIComponent(model_name)}`;
+
+        if (streaming_flag) {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Network error: ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+            let done = false;
+
+            while (!done) {
+              const { value, done: doneReading } = await reader.read();
+              done = doneReading;
+              // Accumulate the stream text
+              buffer += decoder.decode(value, { stream: true });
+
+              // Split into lines (each line should be a complete JSON string)
+              let lines = buffer.split("\n");
+              // Keep any incomplete line in the buffer
+              buffer = lines.pop();
+
+              for (const line of lines) {
+                if (line.trim()) {
+                  try {
+                    // Parse the JSON object from the line
+                    const parsed = JSON.parse(line);
+                    if (parsed.content) {
+                      // Escape backslashes: replace "\" with "\\"
+                      const escapedContent = parsed.content.replace(
+                        /\\/g,
+                        "\\\\"
+                      );
+                      // Append only the escaped content to the Editor
+                      markdownInput.value += escapedContent;
+                    }
+                    // Optionally, handle a "stream complete" message if needed:
+                    // if (parsed.message === 'Stream complete') { ... }
+                  } catch (err) {
+                    console.error("Error parsing JSON:", err);
+                  }
+                }
+              }
+              // Scroll the Editor to the bottom for the latest content
+              markdownInput.scrollTop = markdownInput.scrollHeight;
+            }
+
+            // Once the stream is complete, update the Preview pane.
+            if (!isMathRendered) {
+              // Render the final markdown content to update the preview.
+              renderMarkdown(true);
+              isMathRendered = true;
+            }
+            submitBtn.disabled = false;
+          } catch (error) {
+            console.error("Streaming error:", error);
+            submitBtn.disabled = false;
+            alert(
+              "An error occurred while streaming the response. Please try again."
+            );
+          }
+        } else {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Network error: ${response.statusText}`);
+            }
+            const result = await response.json();
+            if (result.content) {
+              markdownInput.value += result.content;
+            } else {
+              alert(result.error || "Unexpected error");
+            }
+            // Scroll the Editor to the bottom for the latest content
+            markdownInput.scrollTop = markdownInput.scrollHeight;
+            if (!isMathRendered) {
+              // Render the final markdown content to update the preview.
+              renderMarkdown(true);
+              isMathRendered = true;
+            }
+            submitBtn.disabled = false;
+          } catch (error) {
+            console.error("Non-streaming error:", error);
+            submitBtn.disabled = false;
+            alert("An error occurred. Please try again.");
           }
         }
-        // Else: Allow newline insertion
-      }
-    });
-  </script>
-</body>
+      });
 
+      resetBtn.addEventListener("click", async () => {
+        try {
+          const response = await fetch("/reset", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+            }),
+          });
+
+          if (response.ok) {
+            markdownInput.value = "";
+            preview.innerHTML = "";
+            queryInput.value = "";
+            markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+            markdownInput.value += `\n Model: ${model_name} \n`;
+            renderMarkdown();
+            autoResize();
+          } else {
+            console.error("Failed to reset conversation");
+          }
+        } catch (error) {
+          console.error("Error resetting conversation:", error);
+        }
+      });
+
+      queryInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          if (e.ctrlKey) {
+            // Ctrl + Enter: Submit the message
+            e.preventDefault(); // Prevent newline insertion
+            if (submitBtn && !submitBtn.disabled) {
+              submitBtn.click(); // Trigger send button if it's enabled
+            }
+          }
+          // Else: Allow newline insertion
+        }
+      });
+    </script>
+  </body>
 </html>
