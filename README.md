@@ -69,8 +69,8 @@ A versatile web-based chatbot application supporting multiple Large Language Mod
 1.  **Clone the Repository**
 
     ```bash
-    git clone <your-repository-url>
-    cd <your-repository-directory>
+    git clone https://github.com/EjayNg-AI/openai-flask-chatbot.git
+    cd openai-flask-chatbot
     ```
 
 2.  **Create a Virtual Environment**
@@ -189,7 +189,7 @@ Navigate to `http://127.0.0.1:5000/` in your web browser. Each browser tab will 
 ## Project Structure
 
 ```
-your-repository-directory/
+openai-flask-chatbot/
 ├── app.py              # Main Flask application, API logic, LLM clients
 ├── templates/
 │   ├── index.html      # Main chat interface HTML/CSS/JS
