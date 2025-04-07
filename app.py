@@ -726,7 +726,7 @@ def get_directory_structure(rootdir):
     Recursively builds a directory structure.
     Only includes files with specific extensions.
     """
-    allowed_extensions = {'.html', '.htm', '.php', '.js', '.css', '.py', '.json', '.ipynb'}
+    allowed_extensions = {'.text', '.txt', '.md', '.html', '.htm', '.php', '.js', '.css', '.py', '.json', '.ipynb'}
     structure = []
 
     try:
