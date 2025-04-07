@@ -82,6 +82,16 @@
       /* Prevent buttons from shrinking */
     }
 
+    .copy-prompt-btn:hover {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    .copy-prompt-btn {
+      background-color: #f57c00;
+      color: white;
+    }
+
     .load-btn {
       background-color: #aa4444;
       color: white;
@@ -303,6 +313,7 @@
 
   <div class="control-panel">
     <textarea type="text" id="query-input" class="query-input" placeholder="Enter your question..."></textarea>
+    <button id="copy-prompt-btn" class="button copy-prompt-btn">Copy</button>
     <button id="submit-btn" class="button submit-btn">Submit</button>
     <button id="clearscreen-btn" class="button clearscreen-btn">
       Clear Screen
@@ -324,6 +335,7 @@
 
     const dropdown_menu = document.getElementById("language-model");
     const queryInput = document.getElementById("query-input");
+    const copyPromptBtn = document.getElementById("copy-prompt-btn");
     const submitBtn = document.getElementById("submit-btn");
     const clear_scr = document.getElementById("clearscreen-btn");
     const loadBtn = document.getElementById("load-btn");
@@ -345,6 +357,7 @@
     let streaming_flag = true;
     let claude_thinking_flag = false;
     let consolidate_flag = false;
+    let currentFileContents = "";
     let consolidate_option = "fully_updated";
     let prompt_consolidate =
       "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
@@ -431,8 +444,8 @@ For each **source code file**, provide the following metadata:
 ## Output Format
 
 - Format your final answer as a **Markdown document** with clear headings and subheadings.
-- First, list all **file-level** metadata (in whichever order the files appear or by directory order).
-- Then, provide a **"Codebase-Level Information"** section at the end.
+- First, provide a **"Codebase-Level Information"** section.
+- Then, list all **file-level** metadata (in whichever order the files appear or by directory order).
 - If any of the elements do not apply to a particular file, please omit them or mark them as “N/A.”  
 - Make sure to keep your headings and structure consistent.
 - Be **concise** but **complete**. Avoid repeating boilerplate. Capture purpose, semantics, and relationships, not just syntax.
@@ -475,6 +488,7 @@ For each **source code file**, provide the following metadata:
         return;
       }
       // Open the /load endpoint with the conversation name as a query parameter in a new tab.
+      currentFileContents = "";
       window.open(
         `/load?name=${encodeURIComponent(conversationName)}`,
         "_blank"
@@ -502,6 +516,12 @@ For each **source code file**, provide the following metadata:
         const url = `/consolidate?${params.toString()}`;
         window.open(url, "_blank");
       });
+
+    function updateFileContents(contents) {
+      currentFileContents = contents;
+      console.log("File contents updated in main window.");
+    }
+
 
     // Fetch token from the Flask backend
     fetch("/get-token")
@@ -543,6 +563,34 @@ For each **source code file**, provide the following metadata:
       .catch((error) => {
         console.error("Error fetching token:", error);
       });
+
+    copyPromptBtn.addEventListener("click", () => {
+      const currentQuery = queryInput.value;
+      const fullPrompt = currentFileContents
+        ? currentQuery + " \n  \n " + currentFileContents
+        : currentQuery;
+
+      if (fullPrompt.trim() === "") {
+        alert("Nothing to copy (input and file contents are empty).");
+        return;
+      }
+
+      navigator.clipboard.writeText(fullPrompt)
+        .then(() => {
+          const originalText = copyPromptBtn.innerText;
+          copyPromptBtn.innerText = "Copied!";
+          copyPromptBtn.disabled = true; // Briefly disable
+          console.log("Prompt copied to clipboard.");
+          setTimeout(() => {
+            copyPromptBtn.innerText = originalText;
+            copyPromptBtn.disabled = false;
+          }, 2000); // Reset after 2 seconds
+        })
+        .catch(err => {
+          console.error("Failed to copy prompt: ", err);
+          alert("Failed to copy prompt to clipboard. See console for details.");
+        });
+    });
 
     clear_scr.addEventListener("click", async () => {
       queryInput.value = "";
@@ -648,7 +696,7 @@ For each **source code file**, provide the following metadata:
     closeBtn.addEventListener("click", async () => {
       queryInput.value = "";
       autoResize();
-
+      currentFileContents = "";
       preview.innerHTML = "";
       markdownInput.value = "";
 
@@ -749,6 +797,7 @@ For each **source code file**, provide the following metadata:
       autoResize();
       submitBtn.disabled = true;
       appendConversationTurn(query);
+      currentFileContents = "";
 
       let isMathRendered = false;
 
@@ -861,6 +910,7 @@ For each **source code file**, provide the following metadata:
         });
 
         if (response.ok) {
+          currentFileContents = "";
           markdownInput.value = "";
           preview.innerHTML = "";
           queryInput.value = "";

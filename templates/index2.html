@@ -126,6 +126,20 @@
       selectedFiles = [];
     }
 
+    function clearLoadedContent() {
+      document.getElementById("output").textContent = "";
+      selectedFiles = []; // Clear selected files array
+      // Also clear content in the main window
+      try {
+        if (window.opener && !window.opener.closed && typeof window.opener.updateFileContents === 'function') {
+          window.opener.updateFileContents(""); // Send empty string
+          console.log("Cleared file contents in opener window.");
+        }
+      } catch (e) {
+        console.error("Error clearing content in opener window:", e);
+      }
+    }
+
     document
       .getElementById("open-folder")
       .addEventListener("click", function () {
@@ -136,6 +150,7 @@
               alert(data.error);
             } else {
               loadDirectoryTree(data.structure);
+              clearLoadedContent();
             }
           })
           .catch((err) => console.error(err));
@@ -149,6 +164,7 @@
             alert(data.error);
           } else {
             loadDirectoryTree(data.structure);
+            clearLoadedContent();
           }
         })
         .catch((err) => console.error(err));
@@ -169,6 +185,23 @@
             } else {
               // Display the concatenated string in the <pre> element.
               document.getElementById("output").textContent = data.result;
+
+              try {
+                if (window.opener && !window.opener.closed && typeof window.opener.updateFileContents === 'function') {
+                  window.opener.updateFileContents(data.result);
+                  console.log("Sent file contents to opener window.");
+                  // Optional: Close this window after successful load
+                  // window.close();
+                } else {
+                  console.warn("Could not find or access the 'updateFileContents' function on the opener window. Ensure the main chat window is still open.");
+                  alert("File contents loaded here, but couldn't update the main chat window automatically. You may need to copy/paste manually if the 'Copy Prompt' button doesn't include the files.");
+                }
+              } catch (e) {
+                console.error("Error communicating with opener window:", e);
+                alert("An error occurred while trying to update the main chat window.");
+              }
+
+
             }
           })
           .catch((err) => console.error(err));
