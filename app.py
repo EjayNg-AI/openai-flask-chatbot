@@ -46,6 +46,9 @@ model_name = "chatgpt-4o-latest"
 # Global variable to store the selected folder path.
 selected_folder = None
 
+# Flag to indicate if math rendering is enabled
+math_render_flag = False
+
 # Flag to indicate if Claude is thinking
 claude_thinking_flag = False
 
@@ -229,6 +232,13 @@ def update_claude_thought_state():
     data = request.get_json()
     claude_thinking_flag = data.get('claude_thinking_flag')
     return jsonify({'status': 'updated', 'value': claude_thinking_flag}), 200
+
+@app.route('/update-math-render', methods=['POST'])
+def update_math_render_state():
+    global math_render_flag
+    data = request.get_json()
+    math_render_flag = data.get('math_render_flag')
+    return jsonify({'status': 'updated', 'value': math_render_flag}), 200
 
 # Load Conversation Endpoint
 @app.route('/load', methods=['GET'])
@@ -692,34 +702,6 @@ def choose_folder():
     root.destroy()
     return folder_path
 
-"""
-def get_directory_structure(rootdir):
-    # 
-    #Recursively builds a directory structure.
-    #Each file/directory is represented as a dict.
-    # 
-    structure = []
-    try:
-        for item in os.listdir(rootdir):
-            full_path = os.path.join(rootdir, item)
-            if os.path.isdir(full_path):
-                structure.append({
-                    "name": item,
-                    "path": full_path,
-                    "type": "directory",
-                    "children": get_directory_structure(full_path)
-                })
-            else:
-                structure.append({
-                    "name": item,
-                    "path": full_path,
-                    "type": "file"
-                })
-    except Exception as e:
-        print(f"Error reading directory {rootdir}: {e}")
-    return structure
-"""
-
 
 def get_directory_structure(rootdir):
     """
@@ -807,6 +789,15 @@ def load_selection():
     result += "---"
     global_file_contents = result
     return jsonify({"result": result})
+
+@app.route('/clear_loaded_content', methods=['POST'])
+def clear_loaded_content():
+    """
+    Clears the global file contents stored on the backend.
+    """
+    global global_file_contents
+    global_file_contents = ""
+    return jsonify({"message": "global_file_contents cleared"}), 200
 
 
 if __name__ == '__main__':

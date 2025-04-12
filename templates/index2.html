@@ -66,6 +66,7 @@
       <button id="open-folder">Open Folder</button>
       <button id="load-selection">Load Selection</button>
       <button id="refresh">Refresh</button>
+      <button id="clear">Clear Loaded Content</button>
       <div id="directory-tree"></div>
     </div>
     <div id="right-panel">
@@ -126,19 +127,38 @@
       selectedFiles = [];
     }
 
+
+
     function clearLoadedContent() {
+      // Clear the <pre> element that holds concatenated file contents.
       document.getElementById("output").textContent = "";
-      selectedFiles = []; // Clear selected files array
-      // Also clear content in the main window
+      // Clear the locally tracked selected files.
+      selectedFiles = [];
+
+      // Clear content in the main (opener) window if applicable.
       try {
         if (window.opener && !window.opener.closed && typeof window.opener.updateFileContents === 'function') {
-          window.opener.updateFileContents(""); // Send empty string
+          window.opener.updateFileContents("");
           console.log("Cleared file contents in opener window.");
         }
       } catch (e) {
         console.error("Error clearing content in opener window:", e);
       }
+
+      // Send a POST request to the backend endpoint to clear global_file_contents.
+      fetch("/clear_loaded_content", { method: "POST" })
+        .then(response => response.json())
+        .then(data => {
+          console.log("Backend clear operation success:", data.message);
+        })
+        .catch(error => {
+          console.error("Error clearing backend global_file_contents:", error);
+        });
     }
+
+    document.getElementById("clear").addEventListener("click", function () {
+      clearLoadedContent();
+    });
 
     document
       .getElementById("open-folder")

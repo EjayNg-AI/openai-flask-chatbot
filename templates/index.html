@@ -294,6 +294,12 @@
       </label>
     </div>
     <div>
+      <label style="margin-left: 10px">
+        <input type="checkbox" id="math-render" />
+        Escape Output & Render Math
+      </label>
+    </div>
+    <div>
       <button id="file-viewer-btn" class="file-viewer-btn">
         File Viewer
       </button>
@@ -346,6 +352,7 @@
     const preview = document.getElementById("preview");
     const choose_model = document.getElementById("model_choice");
     const claudeThinking = document.getElementById("claude-thinking");
+    const MathRender = document.getElementById("math-render");
 
     submitBtn.disabled = true;
     SaveBtn.disabled = true;
@@ -356,6 +363,7 @@
     let model_name;
     let streaming_flag = true;
     let claude_thinking_flag = false;
+    let math_render_flag = false;
     let consolidate_flag = false;
     let currentFileContents = "";
     let consolidate_option = "fully_updated";
@@ -453,6 +461,27 @@ For each **source code file**, provide the following metadata:
 ---
 
 `;
+
+    MathRender.addEventListener("change", async () => {
+      math_render_flag = MathRender.checked;
+      // Send to backend
+      try {
+        await fetch("/update-math-render", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            math_render_flag: math_render_flag,
+          }),
+        });
+        if (markdownInput) {
+          markdownInput.value += `\n Math Rendering: ${math_render_flag} \n`;
+        }
+      } catch (err) {
+        console.error("Failed to update backend:", err);
+      }
+    });
 
     claudeThinking.addEventListener("change", async () => {
       claude_thinking_flag = claudeThinking.checked;
@@ -835,17 +864,22 @@ For each **source code file**, provide the following metadata:
                 try {
                   // Parse the JSON object from the line
                   const parsed = JSON.parse(line);
+                  let escapedContent;
                   if (parsed.content) {
-                    // Escape backslashes: replace "\" with "\\"
-                    const escapedContent = parsed.content.replace(
-                      /\\/g,
-                      "\\\\"
-                    );
+                    if (math_render_flag) {
+                      // Escape backslashes: replace "\" with "\\"
+                      escapedContent = parsed.content.replace(
+                        /\\/g,
+                        "\\\\"
+                      );
+                    }
+                    else {
+                      escapedContent = parsed.content
+                    }
                     // Append only the escaped content to the Editor
                     markdownInput.value += escapedContent;
                   }
-                  // Optionally, handle a "stream complete" message if needed:
-                  // if (parsed.message === 'Stream complete') { ... }
+
                 } catch (err) {
                   console.error("Error parsing JSON:", err);
                 }
