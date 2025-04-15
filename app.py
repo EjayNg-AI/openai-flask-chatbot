@@ -849,16 +849,18 @@ def clear_loaded_content():
     return jsonify({"message": "global_file_contents cleared"}), 200
 
 
-def find_available_port(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        if s.connect_ex(('127.0.0.1', port)):
-            return port
-        else:
-            return find_available_port(port + 1)
+
+def find_available_port_iterative(start_port, end_port=65535):
+    for port in range(start_port, end_port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', port)):
+                return port
+    raise RuntimeError("No available port found.")
 
 
 
 if __name__ == '__main__':
-    port = find_available_port(5000)
+    print("Please wait while we find an available port for use.")
+    port = find_available_port_iterative(5000)
     print(f"Serving on port {port}")
-    app.run(host='127.0.0.1', port=port)
+    serve(app, host='127.0.0.1', port=port)
