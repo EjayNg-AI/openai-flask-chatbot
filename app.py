@@ -362,6 +362,7 @@ def stream():
 
         # Append user message to session
         user_input = user_input + "\n" + global_file_contents
+        global_file_contents = ""
         message_accumulate.append([unique_id, counter, {"role": "user", "content": user_input}])
         conversation_history = get_conversation_history(unique_id, counter)
 
