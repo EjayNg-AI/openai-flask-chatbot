@@ -1,6 +1,7 @@
 import sys
 import os
 import base64
+import socket 
 from flask import copy_current_request_context, json, Flask, render_template, request, session, jsonify, Response, stream_with_context, send_from_directory
 from openai import OpenAI
 import anthropic
@@ -656,10 +657,11 @@ def stream():
 
                 generate_content_config = types.GenerateContentConfig(
                     temperature=0,
+                    tools = [types.Tool(google_search=types.GoogleSearch())],
                     safety_settings=[
                         types.SafetySetting(
                             category="HARM_CATEGORY_CIVIC_INTEGRITY",
-                            threshold="OFF",  # Off - Be cautious with safety settings
+                            threshold="OFF",  
                         ),
                     ],
                     response_mime_type="text/plain",
@@ -847,5 +849,16 @@ def clear_loaded_content():
     return jsonify({"message": "global_file_contents cleared"}), 200
 
 
+def find_available_port(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(('127.0.0.1', port)):
+            return port
+        else:
+            return find_available_port(port + 1)
+
+
+
 if __name__ == '__main__':
-    serve(app, host='127.0.0.1', port=5000)
+    port = find_available_port(5000)
+    print(f"Serving on port {port}")
+    app.run(host='127.0.0.1', port=port)
