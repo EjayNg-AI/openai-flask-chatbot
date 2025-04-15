@@ -735,6 +735,14 @@ def select_model() -> Dict[str, str]:
     model_name = data.get('selectedModel')
     return jsonify({'status': 'Model reset successfully'})
 
+
+@app.route('/get_file_contents', methods=['GET'])
+def get_file_contents():
+    global global_file_contents
+    return jsonify({"file_contents": global_file_contents})
+
+
+
 #####################
 # File Contents Viewer
 #####################
