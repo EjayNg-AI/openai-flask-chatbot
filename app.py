@@ -374,7 +374,7 @@ def stream():
             global claude_thinking_flag
             collected_chunks = ['\n']
 
-            if "gpt" in model_name:
+            if "4o" in model_name:
 
                 # Construct full prompt with system message
                 full_prompt = []
@@ -430,6 +430,53 @@ def stream():
                 except Exception as e:
                     logger.error(f"Error in generate_response: {e}", exc_info=True)
                     yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
+
+
+            elif "gpt-4.1" in model_name:
+
+                # Construct full prompt with system message
+                full_prompt = []
+                full_prompt.append(
+                    {"role": "system", 
+                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide comprehensive, insightful, forward-thinking responses to user queries."}]
+                     }
+                )
+                for messagedict in conversation_history:
+                    if messagedict['role'] == 'user':
+                        full_prompt.append(
+                            {"role": "user", 
+                             "content": [{"type": "input_text", "text": messagedict['content']}]
+                             }
+                        )
+                    elif messagedict['role'] == 'assistant':
+                        full_prompt.append(
+                            {"role": "assistant", 
+                             "content": [{"type": "output_text", "text": messagedict['content']}]
+                             }
+                        )
+
+                try:
+                    # Call OpenAI API with conversation history
+                    response = client.responses.create(
+                        model=model_name,
+                        input=full_prompt,
+                        temperature=0,
+                        max_output_tokens=16384,
+                        top_p=1,
+                        text={"format": {"type": "text"}},
+                        reasoning={},
+                        tools=[],
+                        store=True,
+                    )
+                    bot_message = response.output_text
+                    yield json.dumps({'content': bot_message}) + "\n"
+                    message_accumulate.append([unique_id, counter, {"role": "assistant", "content": bot_message}])
+        
+                except Exception as e:
+                    logger.error(f"Error in generate_response: {e}", exc_info=True)
+                    yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
+
+
             
             elif "o1-pro" in model_name:
 
@@ -437,7 +484,7 @@ def stream():
                 full_prompt = []
                 full_prompt.append(
                     {"role": "developer", 
-                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide insightful, forward-thinking, and creative responses to user queries."}]
+                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide comprehensive, insightful, forward-thinking responses to user queries."}]
                      }
                 )
                 for messagedict in conversation_history:
