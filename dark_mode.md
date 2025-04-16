@@ -1,1191 +1,129 @@
-Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
 
-Model: chatgpt-4o-latest
+ Unique Session ID: e630bec2-e347-4871-94a8-cf9f53073719 
 
-Streaming: true
+ Model: chatgpt-4o-latest 
 
-Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
+ Streaming: true 
 
-Model: gemini-2.5-pro-exp-03-25
 
-Streaming: true
+ Unique Session ID: e630bec2-e347-4871-94a8-cf9f53073719 
 
-Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
+ Model: o3-mini 
 
-Model: o3-mini
+ Streaming: true 
 
-Streaming: true
 
-**Model:** o3-mini
+**Model:** o3-mini 
 
-**Assistant:**
+**Assistant:** 
 
-Below is an updated version of your index.html that adds both dark mode styling and a toggle button. In this version, a new CSS section is added for dark mode, a new “Dark Mode” button is injected into the model controls, and JavaScript is added to toggle a “dark‐mode” class on the body. When the class is present, the dark theme styles override the default colors. You can adjust the colors as needed.
+The project is a Flask-based web application that provides an interactive chat interface for engaging with multiple large language models (LLMs). Its primary scope is to enable users to conduct conversational interactions with AI models from providers such as OpenAI, Anthropic (Claude), and Google Gemini, while also giving them tools to manage and manipulate conversation context along with file-based code content. Key aspects of its functionality include:
 
-Below is the complete updated index.html file:
+• Chat and Conversation Management:  
+ – Each session is assigned a unique token and stores conversation history in server-side sessions.  
+ – Endpoints let users send prompts to an LLM (via streaming responses or complete responses), reset or refresh a conversation, and select different AI models at runtime.  
+ – The backend constructs prompts by prepending a system message and aggregating the conversation history.
 
-````
+• Multi-Model Integration:  
+ – Depending on the selected model (indicated by strings such as “4o”, “gpt‐4.1”, “claude”, “gemini”, etc.), the application dynamically builds the request payload and calls the appropriate API with proper error handling and streaming capabilities.
+ – There are specific treatments for features like “extended thinking” or “math rendering” that adjust model behavior and output formatting.
+
+• Conversation Consolidation, Saving, and Loading:  
+ – Users can consolidate conversation content (e.g., to generate a full project synopsis, refactor code, or critique the code) using a dedicated endpoint.  
+ – The application supports saving complete conversation logs and even markdown snapshots of the dialog, and later loading them back into the interface.
+
+• File and Directory Operations for Code Context:  
+ – Using a Tkinter-based folder selection dialog, the app lets the user choose a project folder and recursively scan it for files of specific types (e.g., Python, HTML, Markdown, JSON).  
+ – Users can load selected file contents into the chat context so that code snippets or entire source files can be incorporated into the conversation prompt.
+ – There is also a file viewer interface that displays directory structure and file contents for review and copying.
+
+• User Interface and Additional Enhancements:  
+ – The frontend (provided via index.html) offers a rich interface with a query input area, markdown editor/preview pane, model selection dropdown, and buttons for actions such as submitting queries, copying prompts, sanitizing text, loading/saving conversations, and viewing files.  
+ – Integration with libraries like MathJax (for math rendering), Highlight.js (for code syntax highlighting), and Marked (for parsing markdown) enhances the presentation of the interaction content.
+
+Overall, the project combines robust session and conversation management with dynamic interactions with multiple LLM APIs. It also provides developers with the ability to augment and analyze their code (through file selection and consolidation features) all within an integrated, real-time chat interface.
+
+**Model:** o3-mini 
+
+**Assistant:** 
+
+Below is an example of how to add a button that toggles dark mode. In dark mode the overall page gets a near‑black background with white text while text areas (the editor/preview) change their background accordingly and code blocks get a separate dark background. Note that the button styling is preserved so its colors remain as in normal mode.
+
+You can integrate the following changes into your existing index.html. For example, add the extra CSS rules inside your &lt;style&gt; section, insert the new “Toggle Dark Mode” button in one of your control panels, and include the JavaScript that toggles a “dark-mode” class on the &lt;body&gt; element.
+
+Below is a complete example:
+
+```
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chatbot powered by State of the Art LLMs</title>
-
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [
-            ["$", "$"],
-            ["\\(", "\\)"],
-          ],
-          displayMath: [
-            ["$$", "$$"],
-            ["\\[", "\\]"],
-          ],
-        },
-        options: {
-          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
-        },
-      };
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-
+    <title>Chatbot Interface with Dark Mode</title>
+    
+    <!-- Existing CSS and other <head> content here -->
+    
     <style>
-      body {
-        font-family: "Roboto", sans-serif;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-      }
+      /* Existing styles remain unchanged... */
 
-      .control-panel {
-        display: flex;
-        gap: 10px;
-        padding: 20px;
-        background-color: #f0f0f0;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .query-input {
-        font-size: 16px;
-        flex: 1;
-        /* Take up available horizontal space */
-        resize: none;
-        /* Disable manual resizing */
-        line-height: 1.2;
-        min-height: 10px;
-        /* Approx. 1 line */
-        max-height: 100px;
-        /* Approx. 10 lines */
-        overflow-y: auto;
-        /* Show scrollbar when content exceeds max-height */
-        transition: height 0.2s ease;
-        padding: 2.3px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-      }
-
-      .button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        width: 120px;
-        /* Fixed width */
-        height: 60px;
-        /* Fixed height */
-        flex-shrink: 0;
-        /* Prevent buttons from shrinking */
-      }
-
-      .sanitize-btn {
-        background-color: #0066cc;
-        color: white;
-      }
-      .sanitize-btn:hover {
-        background-color: #004999;
-      }
-
-      .copy-prompt-btn:hover {
-        background-color: #ff9800;
-        color: white;
-      }
-
-      .copy-prompt-btn {
-        background-color: #f57c00;
-        color: white;
-      }
-
-      .load-btn {
-        background-color: #aa4444;
-        color: white;
-      }
-
-      .load-btn:hover {
-        background-color: #dd7777;
-        color: white;
-      }
-
-      .save-btn {
-        background-color: #000000;
-        color: white;
-      }
-
-      .save-btn:hover {
-        background-color: #666666;
-        color: white;
-      }
-
-      .submit-btn {
-        background-color: #4caf50;
-        color: white;
-      }
-
-      .submit-btn:hover {
-        background-color: #45df49;
-        color: white;
-      }
-
-      .clearscreen-btn {
-        background-color: #550055;
-        color: white;
-      }
-
-      .clearscreen-btn:hover {
-        background-color: #990099;
-        color: white;
-      }
-
-      .close-btn {
-        background-color: #0000aa;
-        color: white;
-      }
-
-      .close-btn:hover {
-        background-color: #0055ff;
-        color: white;
-      }
-
-      .file-viewer-btn {
-        background-color: #aa0044;
-        color: white;
-      }
-
-      .file-viewer-btn:hover {
-        background-color: #cc0066;
-        color: white;
-      }
-
-      .consolidate-btn {
-        background-color: #000000;
-        color: white;
-      }
-
-      .consolidate-btn:hover {
-        background-color: #666666;
-        color: white;
-      }
-
-      .reset-btn {
-        background-color: #f44336;
-        color: white;
-      }
-
-      .reset-btn:hover {
-        background-color: #ff0099;
-        color: white;
-      }
-
-      .conversation-turn {
-        margin-bottom: 20px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #eee;
-      }
-
-      .query-container {
-        padding: 20px;
-        background-color: #f0f0f0;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .container {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-      }
-
-      .editor,
-      .preview {
-        width: 50%;
-        padding: 20px;
-        box-sizing: border-box;
-        overflow: auto;
-      }
-
-      .editor {
-        border-right: 1px solid #ddd;
-        background-color: #f9f9f9;
-      }
-
-      #markdown-input {
-        width: 100%;
-        height: 100%;
-        resize: none;
-        border: none;
-        outline: none;
-        font-size: 16px;
-        font-family: "Courier New", Courier, monospace;
-      }
-
-      .preview {
-        background-color: #fff;
-      }
-
-      pre {
-        position: relative;
-        background-color: #f0f0f0;
-        padding: 15px;
-        overflow: auto;
-        border-radius: 5px;
-      }
-
-      pre button.copy-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: #4caf50;
-        border: none;
-        color: white;
-        padding: 5px 10px;
-        cursor: pointer;
-        border-radius: 3px;
-        font-size: 12px;
-      }
-
-      blockquote {
-        border-left: 5px solid #ccc;
-        padding-left: 15px;
-        color: #666;
-        margin: 1em 0;
-      }
-
-      .model-controls {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 5px;
-        background-color: #ffffff;
-        border-bottom: 1px solid #000000;
-      }
-
-      /* Dark Mode Styles */
+      /* ---------------- Dark Mode Styles ---------------- */
+      /* When the body receives the "dark-mode" class the following rules apply */
       body.dark-mode {
         background-color: #121212;
-        color: #e0e0e0;
+        color: white; /* General text color */
       }
-      body.dark-mode .control-panel {
-        background-color: #1f1f1f;
-        border-bottom: 1px solid #333;
-      }
+      /* Override background and text for control panels & header areas */
+      body.dark-mode .control-panel,
       body.dark-mode .model-controls {
-        background-color: #1f1f1f;
-        border-bottom: 1px solid #333;
+        background-color: #181818;
+        color: white;
       }
-      body.dark-mode .editor {
-        background-color: #1e1e1e;
-        border-right: 1px solid #444;
+      /* Editor and preview areas use near‑black backgrounds with white text */
+      body.dark-mode .editor,
+      body.dark-mode .preview,
+      body.dark-mode textarea {
+        background-color: #121212;
+        color: white;
       }
-      body.dark-mode .preview {
-        background-color: #151515;
+      /* Code blocks use a different dark background for contrast */
+      body.dark-mode pre {
+        background-color: #2e2e2e;
+        color: white;
       }
-      body.dark-mode textarea,
-      body.dark-mode select {
-        background-color: #1e1e1e;
-        color: #e0e0e0;
-        border: 1px solid #444;
-      }
+      /* Ensure that buttons keep their original colors */
       body.dark-mode button {
-        background-color: #333;
-        color: #e0e0e0;
-        border: none;
+        color: unset; /* Revert to button’s own (normal mode) text color */
+        background-color: unset;
       }
-      body.dark-mode button:hover {
-        background-color: #555;
-      }
+      /* ---------------- End Dark Mode Styles ---------------- */
     </style>
   </head>
-
   <body>
+    <!-- Example controls with model selection and extra options -->
     <div class="model-controls">
-      <div class="drop-down-menu">
-        <form>
-          <label for="language-model">Select Language Model:</label>
-          <select id="language-model">
-            <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
-            <option value="gpt-4o">gpt-4o</option>
-            <option value="gpt-4.1">gpt-4.1</option>
-            <option value="o1-pro">o1-pro</option>
-            <option value="o1">o1</option>
-            <option value="o3-mini">o3-mini</option>
-            <option value="claude-3-7-sonnet-20250219">
-              claude-3-7-sonnet-20250219
-            </option>
-            <option value="gemini-2.0-flash-thinking-exp-01-21">
-              gemini-2.0-flash-thinking-exp-01-21
-            </option>
-            <option value="gemini-2.5-pro-exp-03-25">
-              gemini-2.5-pro-exp-03-25
-            </option>
-          </select>
-        </form>
-        <button id="model_choice">Select Model</button>
-      </div>
-      <div>
-        <label style="margin-left: 10px">
-          <input type="checkbox" id="claude-thinking" />
-          Claude Extended Thinking
-        </label>
-      </div>
-      <div>
-        <label style="margin-left: 10px">
-          <input type="checkbox" id="math-render" />
-          Escape Output & Render Math
-        </label>
-      </div>
-      <div>
-        <button id="file-viewer-btn" class="file-viewer-btn">
-          File Viewer
-        </button>
-      </div>
-      <div style="display: flex; align-items: center; gap: 5px">
-        <button id="consolidate-btn" class="consolidate-btn">
-          Consolidate
-        </button>
-        <select id="consolidate-option" style="height: 30px; font-size: 14px">
-          <option value="fully_updated">Fully Updated Files</option>
-          <option value="refactor">Refactor Code</option>
-          <option value="critique">Critique Code</option>
-          <option value="synopsis">Synopsis of Project</option>
-        </select>
-      </div>
-      <div>
-        <button id="sanitize-btn" class="sanitize-btn">Sanitize Scripts</button>
-      </div>
-      <!-- Dark Mode Toggle Button -->
-      <div>
-        <button id="toggle-dark-mode" class="button">Dark Mode</button>
-      </div>
+      <!-- Existing model controls (dropdowns, checkboxes, etc.) -->
+      
+      <!-- New Toggle Dark Mode Button -->
+      <button id="toggle-dark-mode" class="button">Toggle Dark Mode</button>
     </div>
 
-    <div class="control-panel">
-      <textarea
-        type="text"
-        id="query-input"
-        class="query-input"
-        placeholder="Enter your question..."
-      ></textarea>
-      <button id="copy-prompt-btn" class="button copy-prompt-btn">
-        Copy Prompt
-      </button>
-      <button id="submit-btn" class="button submit-btn">Submit</button>
-      <button id="clearscreen-btn" class="button clearscreen-btn">
-        Clear Screen
-      </button>
-      <button id="load-btn" class="button load-btn">Load</button>
-      <button id="save-btn" class="button save-btn">Save</button>
-      <button id="reset-btn" class="button reset-btn">Reset</button>
-      <button id="shutdown-btn" class="button close-btn">Close</button>
-    </div>
-    <div class="container">
-      <div class="editor">
-        <textarea id="markdown-input" readonly></textarea>
-      </div>
-      <div class="preview" id="preview"></div>
-    </div>
+    <!-- Other content such as the control panel, editor, preview, etc. -->
+    
+    <!-- Include any additional HTML as needed -->
 
     <script>
-      hljs.highlightAll();
-
-      const dropdown_menu = document.getElementById("language-model");
-      const queryInput = document.getElementById("query-input");
-      const copyPromptBtn = document.getElementById("copy-prompt-btn");
-      const submitBtn = document.getElementById("submit-btn");
-      const clear_scr = document.getElementById("clearscreen-btn");
-      const loadBtn = document.getElementById("load-btn");
-      const SaveBtn = document.getElementById("save-btn");
-      const closeBtn = document.getElementById("shutdown-btn");
-      const resetBtn = document.getElementById("reset-btn");
-      const markdownInput = document.getElementById("markdown-input");
-      const preview = document.getElementById("preview");
-      const choose_model = document.getElementById("model_choice");
-      const claudeThinking = document.getElementById("claude-thinking");
-      const MathRender = document.getElementById("math-render");
-
-      submitBtn.disabled = true;
-      SaveBtn.disabled = true;
-      choose_model.disabled = true;
-      clear_scr.disabled = true;
-
-      let uniqueId;
-      let model_name;
-      let streaming_flag = true;
-      let claude_thinking_flag = false;
-      let math_render_flag = false;
-      let consolidate_flag = false;
-      let currentFileContents = "";
-      let consolidate_option = "fully_updated";
-      let prompt_consolidate =
-        "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
-
-      let refactoringPrompt = `Objective: Refactor and clean up the existing codebase to improve its readability, maintainability, and modularity **without altering any existing functionality or user experience**.
-
-Strict Constraints:
-1. Do not introduce any changes in logic, business rules, or user-facing behavior.
-2. Preserve exact input/output behavior, side-effects, UI layout/flow, and performance characteristics (within a negligible margin).
-3. Do not remove or simplify code that appears redundant unless it has *zero* effect on behavior and is *provably unreachable or unnecessary*.
-
-Goals of Refactoring:
-- Improve structure, clarity, and cohesion of the codebase.
-- Reduce deeply nested logic, excessive coupling, and repetition.
-- Apply standard best practices (e.g., DRY, SRP, consistent naming, modularization).
-- Introduce helper functions, configuration files, or abstractions only if they increase clarity.
-- Document public interfaces, key functions, and assumptions where lacking.
-
-Code Coverage & Testing:
-- All changes must be accompanied by unit or integration tests where possible.
-- Validate that test results remain unchanged post-refactor. If no test suite exists, assist in generating regression tests from current behavior.
-
-Deliverables:
-- Refactored code with in-line comments on major changes or restructuring decisions.
-- A summary of the changes, including files touched, functions moved/extracted, patterns replaced, and any identified anti-patterns.
-- (Optional) A cleanup roadmap for future maintainability and architectural improvements.
-
-Output:
-- Output one refactored file at a time, including the original file name and a summary of changes, recommendations and other notes.
-- Prompt the user to confirm the changes before proceeding to the next file.
-`;
-
-      let synopsisPrompt = `# Provide structured metadata of codebase
-
-**You are a senior software engineer and architect.** You have been provided with multiple source files in your current context. For **each** file, please extract and summarize the following metadata. Then, provide an **overall, high-level summary** of the entire codebase at the end.
-
----
-
-## I. Codebase-Level Information
-
-1. **Directory Structure**
-   - Provide a tree-style or indented list of file and folder paths relative to the project root.
-
-2. **Programming Languages & Key Technologies**
-   - List the programming languages, frameworks, libraries, and technologies used across the codebase.
-
-3. **Entry Points & Execution Flow**
-   - Identify main entry points.
-   - Briefly describe how control flows through the application from start to finish.
-
-4. **High-Level Architecture Overview**
-   - Summarize the architectural style (e.g., monolithic, microservices, event-driven).
-   - Describe major components or modules and how they interact.
-
----
-
-## II. File-Level Information (Repeat for Each File)
-
-For each **source code file**, provide the following metadata:
-
-1. **File Path**
-   - The full path (or best estimate if partial paths are given).
-
-2. **File Type/Language**
-   - Explicitly state the language or file type (e.g., Python, JavaScript, CSS, HTML, JSON).
-
-3. **High-Level Summary/Purpose**
-   - A concise (1–3 sentence) natural language description of what the file does or which feature/component it represents.
-
-4. **Key Entities Defined**
-   - A list of major classes, functions, methods, constants, variables, interfaces, or components.
-
-5. **Dependencies (Imports/Requires)**
-   - A list of other modules/files (from **within** this codebase) that this file imports or requires.
-
-6. **Exports/Public Interface**
-   - A list of entities (classes, functions, constants, etc.) that are publicly exposed and can be used by other files.
-
-7. **Docstrings for Python Modules**
-   - For *python modules*, provide docstrings for each class and function therein.
-
----
-
-## Output Format
-
-- Format your final answer as a **Markdown document** with clear headings and subheadings.
-- First, provide a **"Codebase-Level Information"** section.
-- Then, list all **file-level** metadata (in whichever order the files appear or by directory order).
-- If any of the elements do not apply to a particular file, please omit them or mark them as “N/A.”
-- Make sure to keep your headings and structure consistent.
-- Be **concise** but **complete**. Avoid repeating boilerplate. Capture purpose, semantics, and relationships, not just syntax.
-
----
-
-`;
-
-      /**
-       * sanitizeText scans the given markdown text and escapes any HTML tags
-       * (e.g. <img>, <a>, <p> etc.) that appear outside of code blocks and
-       * that are not already escaped.
-       *
-       * It handles both fenced code blocks (using triple backticks) and inline code
-       * (using single backticks) by splitting the text into segments. Only segments
-       * that are outside of code blocks are sanitized.
-       */
-
-      function sanitizeText(text) {
-        /**
-         * sanitizeInline processes a given text segment (outside fenced code blocks)
-         * and escapes any HTML tags found outside inline code blocks.
-         *
-         * @param {string} segment - A portion of text that might include inline code.
-         * @returns {string} - The segment with HTML tags normalized and escaped.
-         */
-
-        function sanitizeInline(segment) {
-          // Split the segment by inline code blocks wrapped in single backticks.
-          var inlineParts = segment.split(/(`[^`]*`)/g);
-          for (var i = 0; i < inlineParts.length; i++) {
-            // Process only parts that are not inline code.
-            if (!/^`[^`]*`$/.test(inlineParts[i])) {
-              inlineParts[i] = inlineParts[i].replace(
-                // Updated regex: accepts optional quotes around the tag name.
-                /<\s*(\/?)\s*(["']?)([a-zA-Z][a-zA-Z0-9-]*)(["']?)([^>]*)>/g,
-                function (match, slash, openQuote, tagName, closeQuote, rest) {
-                  var trimmedRest = rest.trim();
-                  var normalizedTag =
-                    "&lt;" +
-                    (slash ? slash : "") +
-                    (openQuote ? openQuote : "") +
-                    tagName +
-                    (closeQuote ? closeQuote : "");
-                  if (trimmedRest === "/") {
-                    normalizedTag += trimmedRest + "&gt;";
-                  } else if (trimmedRest) {
-                    normalizedTag += " " + trimmedRest + "&gt;";
-                  } else {
-                    normalizedTag += "&gt;";
-                  }
-                  return normalizedTag;
-                }
-              );
-            }
-          }
-          return inlineParts.join("");
-        }
-
-        // Split the full text by fenced code blocks (``` ... ```)
-        // so that these blocks remain unchanged.
-        var parts = text.split(/(```[\s\S]*?```)/g);
-        for (var j = 0; j < parts.length; j++) {
-          // Only sanitize parts that are not fenced code blocks.
-          if (!/^```/.test(parts[j])) {
-            parts[j] = sanitizeInline(parts[j]);
-          }
-        }
-        return parts.join("");
-      }
-      /**
-       * sanitizeLeftPanel retrieves the current contents of the editor (left panel),
-       * sanitizes it (escaping any tags that are not already inside code blocks),
-       * updates the editor with the sanitized content, and then re-renders the preview.
-       */
-      function sanitizeLeftPanel() {
-        var editor = document.getElementById("markdown-input");
-        if (!editor) {
-          console.error("Editor element (#markdown-input) not found.");
-          return;
-        }
-        var originalText = editor.value;
-        var sanitizedText = sanitizeText(originalText);
-        if (sanitizedText !== originalText) {
-          editor.value = sanitizedText;
-          // Re-render the preview; the renderMarkdown function is defined elsewhere.
-          renderMarkdown(true);
-          alert(
-            "Sanitization complete. Tags outside code blocks have been escaped."
-          );
-        } else {
-          alert("No unsanitized tags found outside code blocks.");
-        }
-      }
-
-      // Attach the sanitizeLeftPanel function to the new button's click event.
-      document
-        .getElementById("sanitize-btn")
-        .addEventListener("click", sanitizeLeftPanel);
-
-      MathRender.addEventListener("change", async () => {
-        math_render_flag = MathRender.checked;
-        // Send to backend
-        try {
-          await fetch("/update-math-render", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              math_render_flag: math_render_flag,
-            }),
-          });
-          if (markdownInput) {
-            markdownInput.value += `\n Math Rendering: ${math_render_flag} \n`;
-          }
-        } catch (err) {
-          console.error("Failed to update backend:", err);
-        }
-      });
-
-      claudeThinking.addEventListener("change", async () => {
-        claude_thinking_flag = claudeThinking.checked;
-        // Send to backend
-        try {
-          await fetch("/update-claude-thinking", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              claude_thinking_flag: claude_thinking_flag,
-            }),
-          });
-          if (markdownInput) {
-            markdownInput.value += `\n Claude Extended Thinking: ${claude_thinking_flag} \n`;
-          }
-        } catch (err) {
-          console.error("Failed to update backend:", err);
-        }
-      });
-
-      document
-        .getElementById("file-viewer-btn")
-        .addEventListener("click", () => {
-          window.open("/filecontents", "_blank");
-        });
-
-      document.getElementById("load-btn").addEventListener("click", () => {
-        const conversationName = prompt("Enter the conversation name to load:");
-        if (!conversationName) {
-          alert("Conversation name is required.");
-          return;
-        }
-        // Open the /load endpoint with the conversation name as a query parameter in a new tab.
-        currentFileContents = "";
-        window.open(
-          `/load?name=${encodeURIComponent(conversationName)}`,
-          "_blank"
-        );
-      });
-
-      document
-        .getElementById("consolidate-btn")
-        .addEventListener("click", () => {
-          const consolidateOption =
-            document.getElementById("consolidate-option").value;
-
-          if (!uniqueId || !model_name || streaming_flag === undefined) {
-            alert("Missing required data.");
-            return;
-          }
-
-          const params = new URLSearchParams({
-            uniqueId: uniqueId,
-            model_name: model_name,
-            streaming_flag: streaming_flag,
-            option: consolidateOption,
-          });
-
-          const url = `/consolidate?${params.toString()}`;
-          window.open(url, "_blank");
-        });
-
-      function updateFileContents(contents) {
-        currentFileContents = contents;
-        console.log("File contents updated in main window.");
-      }
-
-      // Fetch token from the Flask backend
-      fetch("/get-token")
-        .then((response) => response.json())
-        .then((data) => {
-          // Set the global uniqueId
-          uniqueId = data.token;
-          model_name = data.model_name;
-          streaming_flag = !["o1-pro"].includes(model_name);
-          consolidate_flag = data.consolidate_conversation_flag;
-          consolidate_option = data.consolidate_option;
-
-          // Append the token to the markdown input value if markdownInput exists
-          if (markdownInput) {
-            markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
-            markdownInput.value += `\n Model: ${model_name} \n`;
-            markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
-            submitBtn.disabled = false;
-            SaveBtn.disabled = false;
-            choose_model.disabled = false;
-            clear_scr.disabled = false;
-          }
-          if (consolidate_flag) {
-            if (consolidate_option === "fully_updated") {
-              queryInput.value =
-                "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
-            } else if (consolidate_option === "refactor") {
-              queryInput.value = refactoringPrompt;
-            } else if (consolidate_option === "critique") {
-              queryInput.value =
-                "Examine the attached project code files and provide a detailed critique of the code, including suggestions for improvements, potential issues, and best practices. Focus on code quality, readability, and maintainability.";
-            } else if (consolidate_option === "synopsis") {
-              queryInput.value = synopsisPrompt;
-            }
-
-            consolidate_flag = false;
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching token:", error);
-        });
-
-      copyPromptBtn.addEventListener("click", async () => {
-        const currentQuery = queryInput.value;
-
-        // Fetch the latest file contents from the backend
-        let fileContents = "";
-        try {
-          const response = await fetch("/get_file_contents");
-          if (response.ok) {
-            const data = await response.json();
-            fileContents = data.file_contents || "";
-          } else {
-            console.warn("Failed to fetch file contents from backend.");
-          }
-        } catch (err) {
-          console.error("Error fetching file contents from backend:", err);
-        }
-
-        const fullPrompt = fileContents
-          ? currentQuery + " \n  \n " + fileContents
-          : currentQuery;
-
-        if (fullPrompt.trim() === "") {
-          alert("Nothing to copy (input and file contents are empty).");
-          return;
-        }
-
-        navigator.clipboard
-          .writeText(fullPrompt)
-          .then(() => {
-            const originalText = copyPromptBtn.innerText;
-            copyPromptBtn.innerText = "Copied!";
-            copyPromptBtn.disabled = true; // Briefly disable
-            console.log("Prompt copied to clipboard.");
-            setTimeout(() => {
-              copyPromptBtn.innerText = originalText;
-              copyPromptBtn.disabled = false;
-            }, 2000); // Reset after 2 seconds
-          })
-          .catch((err) => {
-            console.error("Failed to copy prompt: ", err);
-            alert(
-              "Failed to copy prompt to clipboard. See console for details."
-            );
-          });
-      });
-
-      clear_scr.addEventListener("click", async () => {
-        queryInput.value = "";
-        autoResize();
-        preview.innerHTML = "";
-        markdownInput.value = "";
-      });
-
-      choose_model.addEventListener("click", async () => {
-        let selectedModel;
-        selectedModel = dropdown_menu.value;
-        model_name = selectedModel;
-        try {
-          const response = await fetch("/select_model", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              uniqueId: uniqueId,
-              selectedModel: selectedModel,
-            }),
-          });
-
-          if (response.ok) {
-            streaming_flag = !["o1-pro"].includes(model_name);
-            markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
-            markdownInput.value += `\n Model: ${model_name} \n`;
-            markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
-            renderMarkdown(true);
-            autoResize();
-          } else {
-            console.error("Failed to choose model");
-          }
-        } catch (error) {
-          console.error("Error choosing model:", error);
-        }
-      });
-
-      // Auto-resize Function
-      function autoResize() {
-        queryInput.style.height = "auto"; // Reset height
-        const scrollHeight = queryInput.scrollHeight;
-        const maxHeight = 150; // Should match CSS max-height
-        if (scrollHeight &lt;maxHeight ) {
-          queryInput.style.height = scrollHeight + "px";
-        } else {
-          queryInput.style.height = maxHeight + "px";
-        }
-      }
-
-      // Initial Resize
-      autoResize();
-
-      // Event Listener for Input
-      queryInput.addEventListener("input", autoResize);
-
-      SaveBtn.addEventListener("click", async () =&gt; {
-        queryInput.value = "";
-        autoResize();
-        const conversationName = prompt("Enter a name for your conversation:");
-        if (!conversationName) {
-          alert("Conversation name is required to save.");
-          return;
-        }
-        // Proceed to save the conversation
-        await saveConversation(conversationName);
-      });
-
-      async function saveConversation(conversationName) {
-        try {
-          // Collect the markdown content from the editor
-          const markdownContent = markdownInput.value;
-
-          // Send POST request to the backend
-          const response = await fetch("/save", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              uniqueId: uniqueId,
-              name: conversationName,
-              content: markdownContent,
-            }),
-          });
-
-          const result = await response.json();
-
-          if (response.ok) {
-            alert("Conversation saved successfully!");
-          } else {
-            alert(
-              `Failed to save conversation: ${result.error || "Unknown error"}`
-            );
-          }
-        } catch (error) {
-          console.error("Error saving conversation:", error);
-          alert("An error occurred while saving the conversation.");
-        }
-      }
-
-      closeBtn.addEventListener("click", async () => {
-        queryInput.value = "";
-        autoResize();
-        currentFileContents = "";
-        preview.innerHTML = "";
-        markdownInput.value = "";
-
-        fetch("/shutdown", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            timestamp: new Date().toISOString(),
-          }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.message) {
-              alert(data.message);
-            } else if (data.error) {
-              alert(`Error: ${data.error}`);
-            }
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-          });
-      });
-
-      let renderTimeout;
-
-      function renderMarkdown(renderMath = false) {
-        clearTimeout(renderTimeout);
-
-        let markdownText = markdownInput.value;
-
-        marked.setOptions({
-          breaks: true,
-          highlight: function (code, lang) {
-            if (lang && hljs.getLanguage(lang)) {
-              return hljs.highlight(code, { language: lang }).value;
-            } else {
-              return hljs.highlightAuto(code).value;
-            }
-          },
-        });
-        let html = marked.parse(markdownText);
-        preview.innerHTML = html;
-        addCopyButtons();
-
-        if (renderMath) {
-          renderTimeout = setTimeout(() => {
-            renderMathJax();
-          }, 500); // 500ms delay
-        }
-      }
-
-      function addCopyButtons() {
-        const codeBlocks = preview.querySelectorAll("pre");
-        codeBlocks.forEach((pre) => {
-          if (!pre.querySelector("button.copy-btn")) {
-            const button = document.createElement("button");
-            button.className = "copy-btn";
-            button.innerText = "Copy";
-            button.onclick = () => {
-              const code = pre.querySelector("code").innerText;
-              navigator.clipboard
-                .writeText(code)
-                .then(() => {
-                  button.innerText = "Copied!";
-                  setTimeout(() => {
-                    button.innerText = "Copy";
-                  }, 2000);
-                })
-                .catch((err) => {
-                  console.error("Failed to copy: ", err);
-                });
-            };
-            pre.appendChild(button);
-          }
-        });
-      }
-
-      function renderMathJax() {
-        if (window.MathJax) {
-          MathJax.typesetPromise([preview]).catch(function (err) {
-            console.error("MathJax typeset failed: " + err.message);
-          });
-        }
-      }
-
-      function appendConversationTurn(userQuery) {
-        markdownInput.value += `\n\n**Model:** ${model_name} \n\n**Assistant:** \n\n`;
-        renderMarkdown(true);
-      }
-
-      submitBtn.addEventListener("click", async () => {
-        const query = queryInput.value.trim();
-        if (!query) return;
-
-        queryInput.value = "";
-        autoResize();
-        submitBtn.disabled = true;
-        appendConversationTurn(query);
-        currentFileContents = "";
-
-        let isMathRendered = false;
-
-        const url = `/stream?prompt=${encodeURIComponent(
-          query
-        )}&uniqueId=${encodeURIComponent(
-          uniqueId
-        )}&modelname=${encodeURIComponent(model_name)}`;
-
-        if (streaming_flag) {
-          try {
-            const response = await fetch(url);
-            if (!response.ok) {
-              throw new Error(`Network error: ${response.statusText}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-            let done = false;
-
-            while (!done) {
-              const { value, done: doneReading } = await reader.read();
-              done = doneReading;
-              // Accumulate the stream text
-              buffer += decoder.decode(value, { stream: true });
-
-              // Split into lines (each line should be a complete JSON string)
-              let lines = buffer.split("\n");
-              // Keep any incomplete line in the buffer
-              buffer = lines.pop();
-
-              for (const line of lines) {
-                if (line.trim()) {
-                  try {
-                    // Parse the JSON object from the line
-                    const parsed = JSON.parse(line);
-                    let escapedContent;
-                    if (parsed.content) {
-                      if (math_render_flag) {
-                        // Escape backslashes: replace "\" with "\\"
-                        escapedContent = parsed.content.replace(/\\/g, "\\\\");
-                      } else {
-                        escapedContent = parsed.content;
-                      }
-                      // Append only the escaped content to the Editor
-                      markdownInput.value += escapedContent;
-                    }
-                  } catch (err) {
-                    console.error("Error parsing JSON:", err);
-                  }
-                }
-              }
-              // Scroll the Editor to the bottom for the latest content
-              markdownInput.scrollTop = markdownInput.scrollHeight;
-            }
-
-            // Once the stream is complete, update the Preview pane.
-            if (!isMathRendered) {
-              // Render the final markdown content to update the preview.
-              markdownInput.value = sanitizeText(markdownInput.value);
-              renderMarkdown(true);
-              isMathRendered = true;
-            }
-            submitBtn.disabled = false;
-          } catch (error) {
-            console.error("Streaming error:", error);
-            submitBtn.disabled = false;
-            alert(
-              "An error occurred while streaming the response. Please try again."
-            );
-          }
-        } else {
-          try {
-            const response = await fetch(url);
-            if (!response.ok) {
-              throw new Error(`Network error: ${response.statusText}`);
-            }
-            const result = await response.json();
-            if (result.content) {
-              markdownInput.value += result.content;
-            } else {
-              alert(result.error || "Unexpected error");
-            }
-            // Scroll the Editor to the bottom for the latest content
-            markdownInput.scrollTop = markdownInput.scrollHeight;
-            if (!isMathRendered) {
-              // Render the final markdown content to update the preview.
-              markdownInput.value = sanitizeText(markdownInput.value);
-              renderMarkdown(true);
-              isMathRendered = true;
-            }
-            submitBtn.disabled = false;
-          } catch (error) {
-            console.error("Non-streaming error:", error);
-            submitBtn.disabled = false;
-            alert("An error occurred. Please try again.");
-          }
-        }
-      });
-
-      resetBtn.addEventListener("click", async () => {
-        try {
-          const response = await fetch("/reset", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              uniqueId: uniqueId,
-            }),
-          });
-
-          if (response.ok) {
-            currentFileContents = "";
-            markdownInput.value = "";
-            preview.innerHTML = "";
-            queryInput.value = "";
-            markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
-            markdownInput.value += `\n Model: ${model_name} \n`;
-            renderMarkdown();
-            autoResize();
-          } else {
-            console.error("Failed to reset conversation");
-          }
-        } catch (error) {
-          console.error("Error resetting conversation:", error);
-        }
-      });
-
-      queryInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          if (e.ctrlKey) {
-            // Ctrl + Enter: Submit the message
-            e.preventDefault(); // Prevent newline insertion
-            if (submitBtn && !submitBtn.disabled) {
-              submitBtn.click(); // Trigger send button if it's enabled
-            }
-          }
-          // Else: Allow newline insertion
-        }
-      });
-
-      /* Dark Mode Toggle functionality */
-      // As our script is placed at the end of the document,
-      // we can directly attach the event listener to the button.
-      const darkModeToggleBtn = document.getElementById("toggle-dark-mode");
-      darkModeToggleBtn.addEventListener("click", function() {
+      // When the 'Toggle Dark Mode' button is clicked, toggle the "dark-mode" class on the body element
+      document.getElementById("toggle-dark-mode").addEventListener("click", function () {
         document.body.classList.toggle("dark-mode");
-        // Update button label according to the current mode.
-        if (document.body.classList.contains("dark-mode")) {
-          darkModeToggleBtn.innerText = "Light Mode";
-        } else {
-          darkModeToggleBtn.innerText = "Dark Mode";
-        }
       });
-    &lt;/script&gt;
-  &lt;/body&gt;
-&lt;/html&gt;
-````
+    </script>
+  </body>
+</html>
+```
 
-How It Works:
+How it works:
+• The CSS rules defined under the "Dark Mode Styles" section override background and text colors only when the body gets a "dark-mode" class.
+• The added button (with id "toggle-dark-mode") uses the same button class as other buttons so its colors remain unchanged.
+• The JavaScript simply toggles the “dark-mode” class on the &lt;body&gt; element on each click, switching between normal and dark appearances.
+• Code blocks (&lt;pre&gt;) receive their own dark background (different from the editor and preview) so they remain distinct.
 
-1. The new CSS rules at the bottom of the &lt;style&gt; block define colors for elements (body, panels, textareas, buttons, etc.) when the “dark-mode” class is added to the body.
-2. A new toggle button (with id="toggle-dark-mode") is added within the ".model-controls" container.
-3. JavaScript code at the bottom listens for clicks on that button and toggles the “dark-mode” class on the document body while also changing the button’s label between “Dark Mode” and “Light Mode.”
-
-No changes to app.py are necessary for this client–side dark mode functionality.
-
-This complete solution is clean, modular, and well–documented for easy customization.
+You can now integrate this snippet into your project to provide a dark mode toggle for your users.
