@@ -1,3 +1,30 @@
+Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
+
+Model: chatgpt-4o-latest
+
+Streaming: true
+
+Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
+
+Model: gemini-2.5-pro-exp-03-25
+
+Streaming: true
+
+Unique Session ID: 1e271908-5f00-4aed-927f-2961d2403001
+
+Model: o3-mini
+
+Streaming: true
+
+**Model:** o3-mini
+
+**Assistant:**
+
+Below is an updated version of your index.html that adds both dark mode styling and a toggle button. In this version, a new CSS section is added for dark mode, a new “Dark Mode” button is injected into the model controls, and JavaScript is added to toggle a “dark‐mode” class on the body. When the class is present, the dark theme styles override the default colors. You can adjust the colors as needed.
+
+Below is the complete updated index.html file:
+
+````
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -267,10 +294,39 @@
         border-bottom: 1px solid #000000;
       }
 
-      .model-controls .drop-down-menu {
-        display: flex;
-        align-items: center;
-        gap: 5px;
+      /* Dark Mode Styles */
+      body.dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+      body.dark-mode .control-panel {
+        background-color: #1f1f1f;
+        border-bottom: 1px solid #333;
+      }
+      body.dark-mode .model-controls {
+        background-color: #1f1f1f;
+        border-bottom: 1px solid #333;
+      }
+      body.dark-mode .editor {
+        background-color: #1e1e1e;
+        border-right: 1px solid #444;
+      }
+      body.dark-mode .preview {
+        background-color: #151515;
+      }
+      body.dark-mode textarea,
+      body.dark-mode select {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border: 1px solid #444;
+      }
+      body.dark-mode button {
+        background-color: #333;
+        color: #e0e0e0;
+        border: none;
+      }
+      body.dark-mode button:hover {
+        background-color: #555;
       }
     </style>
   </head>
@@ -330,6 +386,10 @@
       </div>
       <div>
         <button id="sanitize-btn" class="sanitize-btn">Sanitize Scripts</button>
+      </div>
+      <!-- Dark Mode Toggle Button -->
+      <div>
+        <button id="toggle-dark-mode" class="button">Dark Mode</button>
       </div>
     </div>
 
@@ -449,25 +509,25 @@ Output:
 
 For each **source code file**, provide the following metadata:
 
-1. **File Path**  
-   - The full path (or best estimate if partial paths are given).  
+1. **File Path**
+   - The full path (or best estimate if partial paths are given).
 
-2. **File Type/Language**  
-   - Explicitly state the language or file type (e.g., Python, JavaScript, CSS, HTML, JSON).  
+2. **File Type/Language**
+   - Explicitly state the language or file type (e.g., Python, JavaScript, CSS, HTML, JSON).
 
-3. **High-Level Summary/Purpose**  
-   - A concise (1–3 sentence) natural language description of what the file does or which feature/component it represents.  
+3. **High-Level Summary/Purpose**
+   - A concise (1–3 sentence) natural language description of what the file does or which feature/component it represents.
 
-4. **Key Entities Defined**  
-   - A list of major classes, functions, methods, constants, variables, interfaces, or components.  
+4. **Key Entities Defined**
+   - A list of major classes, functions, methods, constants, variables, interfaces, or components.
 
-5. **Dependencies (Imports/Requires)**  
-   - A list of other modules/files (from **within** this codebase) that this file imports or requires.  
+5. **Dependencies (Imports/Requires)**
+   - A list of other modules/files (from **within** this codebase) that this file imports or requires.
 
-6. **Exports/Public Interface**  
-   - A list of entities (classes, functions, constants, etc.) that are publicly exposed and can be used by other files.  
+6. **Exports/Public Interface**
+   - A list of entities (classes, functions, constants, etc.) that are publicly exposed and can be used by other files.
 
-7. **Docstrings for Python Modules**  
+7. **Docstrings for Python Modules**
    - For *python modules*, provide docstrings for each class and function therein.
 
 ---
@@ -477,7 +537,7 @@ For each **source code file**, provide the following metadata:
 - Format your final answer as a **Markdown document** with clear headings and subheadings.
 - First, provide a **"Codebase-Level Information"** section.
 - Then, list all **file-level** metadata (in whichever order the files appear or by directory order).
-- If any of the elements do not apply to a particular file, please omit them or mark them as “N/A.”  
+- If any of the elements do not apply to a particular file, please omit them or mark them as “N/A.”
 - Make sure to keep your headings and structure consistent.
 - Be **concise** but **complete**. Avoid repeating boilerplate. Capture purpose, semantics, and relationships, not just syntax.
 
@@ -796,7 +856,7 @@ For each **source code file**, provide the following metadata:
         queryInput.style.height = "auto"; // Reset height
         const scrollHeight = queryInput.scrollHeight;
         const maxHeight = 150; // Should match CSS max-height
-        if (scrollHeight < maxHeight) {
+        if (scrollHeight &lt;maxHeight ) {
           queryInput.style.height = scrollHeight + "px";
         } else {
           queryInput.style.height = maxHeight + "px";
@@ -809,7 +869,7 @@ For each **source code file**, provide the following metadata:
       // Event Listener for Input
       queryInput.addEventListener("input", autoResize);
 
-      SaveBtn.addEventListener("click", async () => {
+      SaveBtn.addEventListener("click", async () =&gt; {
         queryInput.value = "";
         autoResize();
         const conversationName = prompt("Enter a name for your conversation:");
@@ -1101,6 +1161,31 @@ For each **source code file**, provide the following metadata:
           // Else: Allow newline insertion
         }
       });
-    </script>
-  </body>
-</html>
+
+      /* Dark Mode Toggle functionality */
+      // As our script is placed at the end of the document,
+      // we can directly attach the event listener to the button.
+      const darkModeToggleBtn = document.getElementById("toggle-dark-mode");
+      darkModeToggleBtn.addEventListener("click", function() {
+        document.body.classList.toggle("dark-mode");
+        // Update button label according to the current mode.
+        if (document.body.classList.contains("dark-mode")) {
+          darkModeToggleBtn.innerText = "Light Mode";
+        } else {
+          darkModeToggleBtn.innerText = "Dark Mode";
+        }
+      });
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+````
+
+How It Works:
+
+1. The new CSS rules at the bottom of the &lt;style&gt; block define colors for elements (body, panels, textareas, buttons, etc.) when the “dark-mode” class is added to the body.
+2. A new toggle button (with id="toggle-dark-mode") is added within the ".model-controls" container.
+3. JavaScript code at the bottom listens for clicks on that button and toggles the “dark-mode” class on the document body while also changing the button’s label between “Dark Mode” and “Light Mode.”
+
+No changes to app.py are necessary for this client–side dark mode functionality.
+
+This complete solution is clean, modular, and well–documented for easy customization.
