@@ -1,215 +1,242 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Local Directory Displayer</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <title>Local Directory Displayer</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
+      #container {
+        display: flex;
+        height: 100vh;
+      }
 
-    #container {
-      display: flex;
-      height: 100vh;
-    }
+      #left-panel {
+        width: 20%;
+        border-right: 1px solid #ccc;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
 
-    #left-panel {
-      width: 20%;
-      border-right: 1px solid #ccc;
-      padding: 10px;
-      box-sizing: border-box;
-      overflow-y: auto;
-    }
+      #right-panel {
+        flex: 1;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
 
-    #right-panel {
-      flex: 1;
-      padding: 10px;
-      box-sizing: border-box;
-      overflow-y: auto;
-    }
+      button {
+        margin: 5px 0;
+        width: 100%;
+      }
 
-    button {
-      margin: 5px 0;
-      width: 100%;
-    }
+      .node {
+        margin-left: 20px;
+      }
 
-    .node {
-      margin-left: 20px;
-    }
+      .file-entry {
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        overflow-x: auto;
+        /* Enable horizontal scrolling */
+      }
 
-    .file-entry {
-      display: flex;
-      align-items: center;
-      white-space: nowrap;
-      overflow-x: auto;
-      /* Enable horizontal scrolling */
-    }
+      .file-entry input[type="checkbox"] {
+        margin-left: auto;
+        flex-shrink: 0;
+        /* Keeps checkbox from shrinking */
+      }
 
-    .file-entry input[type="checkbox"] {
-      margin-left: auto;
-      flex-shrink: 0;
-      /* Keeps checkbox from shrinking */
-    }
+      .directory-entry {
+        font-weight: bold;
+        margin: 2px 0;
+      }
 
-    .directory-entry {
-      font-weight: bold;
-      margin: 2px 0;
-    }
+      .toggle-triangle {
+        display: inline-block;
+        width: 1em;
+        text-align: center;
+        user-select: none;
+        cursor: pointer;
+        margin-right: 5px;
+      }
+    </style>
+  </head>
 
-    /* little left‐margin on our new hide/show checkbox */
-    .hide-checkbox {
-      margin-right: 5px;
-      vertical-align: middle;
-      cursor: pointer;
-    }
-  </style>
-</head>
-
-<body>
-  <div id="container">
-    <div id="left-panel">
-      <button id="open-folder">Open Folder</button>
-      <button id="load-selection">Load Selection</button>
-      <button id="refresh">Refresh</button>
-      <button id="clear">Clear Loaded Content</button>
-      <div id="directory-tree"></div>
+  <body>
+    <div id="container">
+      <div id="left-panel">
+        <button id="open-folder">Open Folder</button>
+        <button id="load-selection">Load Selection</button>
+        <button id="refresh">Refresh</button>
+        <button id="clear">Clear Loaded Content</button>
+        <div id="directory-tree"></div>
+      </div>
+      <div id="right-panel">
+        <h2>Concatenated File Contents</h2>
+        <!-- Using a <pre> element to preserve formatting -->
+        <pre id="output" style="white-space: pre-wrap"></pre>
+      </div>
     </div>
-    <div id="right-panel">
-      <h2>Concatenated File Contents</h2>
-      <!-- Using a <pre> element to preserve formatting -->
-      <pre id="output" style="white-space: pre-wrap"></pre>
-    </div>
-  </div>
 
-  <script>
+    <script>
+      let selectedFiles = [];
 
+      /**
+       * Un‑checks every file‑entry checkbox in the directory tree.
+       */
+      function uncheckFileCheckboxes() {
+        document
+          .querySelectorAll(
+            '#directory-tree .file-entry input[type="checkbox"]'
+          )
+          .forEach((cb) => (cb.checked = false));
+      }
 
-    let selectedFiles = [];
+      function createTree(node, container) {
+        if (Array.isArray(node)) {
+          node.forEach((item) => createTree(item, container));
+        } else {
+          // wrapper for this node
+          const div = document.createElement("div");
+          div.className = "node";
 
+          if (node.type === "directory") {
+            // 1) create a triangle toggle for collapse/expand
+            const toggleBtn = document.createElement("span");
+            toggleBtn.className = "toggle-triangle";
+            toggleBtn.textContent = "▼"; // Expanded by default
+            toggleBtn.style.cursor = "pointer";
+            toggleBtn.style.marginRight = "5px";
+            toggleBtn.title = "Collapse/Expand this folder";
+            div.appendChild(toggleBtn);
 
-    /**
-     * Un‑checks every file‑entry checkbox in the directory tree.
-     */
-    function uncheckFileCheckboxes() {
-      document
-        .querySelectorAll('#directory-tree .file-entry input[type="checkbox"]')
-        .forEach(cb => cb.checked = false);
-    }
+            // 2) directory name
+            const span = document.createElement("span");
+            span.textContent = node.name;
+            span.className = "directory-entry";
+            div.appendChild(span);
 
+            // 3) append this directory to the parent container
+            container.appendChild(div);
 
+            // 4) if there are children, wrap them in their own sub‑container
+            if (node.children && node.children.length > 0) {
+              const childContainer = document.createElement("div");
+              childContainer.className = "directory-children";
+              div.appendChild(childContainer);
 
-    function createTree(node, container) {
-      if (Array.isArray(node)) {
-        node.forEach(item => createTree(item, container));
-      } else {
-        // wrapper for this node
-        const div = document.createElement("div");
-        div.className = "node";
+              // recursively build the subtree
+              createTree(node.children, childContainer);
 
-        if (node.type === "directory") {
-          // 1) create a checkbox to hide/show children
-          const hideCheckbox = document.createElement("input");
-          hideCheckbox.type = "checkbox";
-          hideCheckbox.className = "hide-checkbox";
-          hideCheckbox.title = "Hide / Show this folder";
-          div.appendChild(hideCheckbox);
-
-          // 2) directory name
-          const span = document.createElement("span");
-          span.textContent = node.name;
-          span.className = "directory-entry";
-          div.appendChild(span);
-
-          // 3) append this directory to the parent container
-          container.appendChild(div);
-
-          // 4) if there are children, wrap them in their own sub‑container
-          if (node.children && node.children.length > 0) {
-            const childContainer = document.createElement("div");
-            // you can give this a class if you want custom styling
-            childContainer.className = "directory-children";
-            div.appendChild(childContainer);
-
-            // recursively build the subtree
-            createTree(node.children, childContainer);
-
-            // 5) wire up collapse/expand
-            hideCheckbox.addEventListener("change", e => {
-              childContainer.style.display = e.target.checked ? "none" : "";
-            });
-          }
-
-        } else if (node.type === "file") {
-          // your existing file‐checkbox code
-          const label = document.createElement("label");
-          label.className = "file-entry";
-
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = node.path;
-          checkbox.addEventListener("change", function (e) {
-            if (e.target.checked) {
-              selectedFiles.push(node.path);
+              // 5) wire up collapse/expand
+              toggleBtn.addEventListener("click", () => {
+                if (childContainer.style.display === "none") {
+                  childContainer.style.display = "";
+                  toggleBtn.textContent = "▼";
+                } else {
+                  childContainer.style.display = "none";
+                  toggleBtn.textContent = "▶";
+                }
+              });
             } else {
-              selectedFiles = selectedFiles.filter(item => item !== node.path);
+              // If no children, hide the triangle
+              toggleBtn.style.visibility = "hidden";
             }
+          } else if (node.type === "file") {
+            // your existing file‐checkbox code
+            const label = document.createElement("label");
+            label.className = "file-entry";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.value = node.path;
+            checkbox.addEventListener("change", function (e) {
+              if (e.target.checked) {
+                selectedFiles.push(node.path);
+              } else {
+                selectedFiles = selectedFiles.filter(
+                  (item) => item !== node.path
+                );
+              }
+            });
+
+            label.appendChild(document.createTextNode(node.name));
+            label.appendChild(checkbox);
+            div.appendChild(label);
+            container.appendChild(div);
+          }
+        }
+      }
+
+      function loadDirectoryTree(structure) {
+        const treeDiv = document.getElementById("directory-tree");
+        treeDiv.innerHTML = "";
+        createTree(structure, treeDiv);
+        selectedFiles = [];
+      }
+
+      function clearLoadedContent() {
+        // Clear the <pre> element that holds concatenated file contents.
+        document.getElementById("output").textContent = "";
+        // Clear the locally tracked selected files.
+        selectedFiles = [];
+        uncheckFileCheckboxes();
+        // Clear content in the main (opener) window if applicable.
+        try {
+          if (
+            window.opener &&
+            !window.opener.closed &&
+            typeof window.opener.updateFileContents === "function"
+          ) {
+            window.opener.updateFileContents("");
+            console.log("Cleared file contents in opener window.");
+          }
+        } catch (e) {
+          console.error("Error clearing content in opener window:", e);
+        }
+
+        // Send a POST request to the backend endpoint to clear global_file_contents.
+        fetch("/clear_loaded_content", { method: "POST" })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Backend clear operation success:", data.message);
+          })
+          .catch((error) => {
+            console.error(
+              "Error clearing backend global_file_contents:",
+              error
+            );
           });
-
-          label.appendChild(document.createTextNode(node.name));
-          label.appendChild(checkbox);
-          div.appendChild(label);
-          container.appendChild(div);
-        }
-      }
-    }
-
-    function loadDirectoryTree(structure) {
-      const treeDiv = document.getElementById("directory-tree");
-      treeDiv.innerHTML = "";
-      createTree(structure, treeDiv);
-      selectedFiles = [];
-    }
-
-
-
-
-    function clearLoadedContent() {
-      // Clear the <pre> element that holds concatenated file contents.
-      document.getElementById("output").textContent = "";
-      // Clear the locally tracked selected files.
-      selectedFiles = [];
-      uncheckFileCheckboxes();
-      // Clear content in the main (opener) window if applicable.
-      try {
-        if (window.opener && !window.opener.closed && typeof window.opener.updateFileContents === 'function') {
-          window.opener.updateFileContents("");
-          console.log("Cleared file contents in opener window.");
-        }
-      } catch (e) {
-        console.error("Error clearing content in opener window:", e);
       }
 
-      // Send a POST request to the backend endpoint to clear global_file_contents.
-      fetch("/clear_loaded_content", { method: "POST" })
-        .then(response => response.json())
-        .then(data => {
-          console.log("Backend clear operation success:", data.message);
-        })
-        .catch(error => {
-          console.error("Error clearing backend global_file_contents:", error);
+      document.getElementById("clear").addEventListener("click", function () {
+        clearLoadedContent();
+      });
+
+      document
+        .getElementById("open-folder")
+        .addEventListener("click", function () {
+          fetch("/open_folder", { method: "POST" })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                loadDirectoryTree(data.structure);
+                clearLoadedContent();
+              }
+            })
+            .catch((err) => console.error(err));
         });
-    }
 
-    document.getElementById("clear").addEventListener("click", function () {
-      clearLoadedContent();
-    });
-
-    document
-      .getElementById("open-folder")
-      .addEventListener("click", function () {
-        fetch("/open_folder", { method: "POST" })
+      document.getElementById("refresh").addEventListener("click", function () {
+        fetch("/refresh")
           .then((response) => response.json())
           .then((data) => {
             if (data.error) {
@@ -222,57 +249,50 @@
           .catch((err) => console.error(err));
       });
 
-    document.getElementById("refresh").addEventListener("click", function () {
-      fetch("/refresh")
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.error) {
-            alert(data.error);
-          } else {
-            loadDirectoryTree(data.structure);
-            clearLoadedContent();
-          }
-        })
-        .catch((err) => console.error(err));
-    });
-
-    document
-      .getElementById("load-selection")
-      .addEventListener("click", function () {
-        fetch("/load_selection", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ files: selectedFiles }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.error) {
-              alert(data.error);
-            } else {
-              // Display the concatenated string in the <pre> element.
-              document.getElementById("output").textContent = data.result;
-
-              try {
-                if (window.opener && !window.opener.closed && typeof window.opener.updateFileContents === 'function') {
-                  window.opener.updateFileContents(data.result);
-                  console.log("Sent file contents to opener window.");
-                  // Optional: Close this window after successful load
-                  // window.close();
-                } else {
-                  console.warn("Could not find or access the 'updateFileContents' function on the opener window. Ensure the main chat window is still open.");
-                  alert("File contents loaded here, but couldn't update the main chat window automatically. You may need to copy/paste manually if the 'Copy Prompt' button doesn't include the files.");
-                }
-              } catch (e) {
-                console.error("Error communicating with opener window:", e);
-                alert("An error occurred while trying to update the main chat window.");
-              }
-
-
-            }
+      document
+        .getElementById("load-selection")
+        .addEventListener("click", function () {
+          fetch("/load_selection", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files: selectedFiles }),
           })
-          .catch((err) => console.error(err));
-      });
-  </script>
-</body>
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                // Display the concatenated string in the <pre> element.
+                document.getElementById("output").textContent = data.result;
 
+                try {
+                  if (
+                    window.opener &&
+                    !window.opener.closed &&
+                    typeof window.opener.updateFileContents === "function"
+                  ) {
+                    window.opener.updateFileContents(data.result);
+                    console.log("Sent file contents to opener window.");
+                    // Optional: Close this window after successful load
+                    // window.close();
+                  } else {
+                    console.warn(
+                      "Could not find or access the 'updateFileContents' function on the opener window. Ensure the main chat window is still open."
+                    );
+                    alert(
+                      "File contents loaded here, but couldn't update the main chat window automatically. You may need to copy/paste manually if the 'Copy Prompt' button doesn't include the files."
+                    );
+                  }
+                } catch (e) {
+                  console.error("Error communicating with opener window:", e);
+                  alert(
+                    "An error occurred while trying to update the main chat window."
+                  );
+                }
+              }
+            })
+            .catch((err) => console.error(err));
+        });
+    </script>
+  </body>
 </html>
