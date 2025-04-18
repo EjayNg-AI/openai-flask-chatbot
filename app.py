@@ -308,9 +308,22 @@ def save_conversation():
         return jsonify({'error': 'Failed to save conversation.'}), 500
 
     markdown_path = os.path.join(CONVERSATIONS_DIR, f"{filename}.md")
+    md_lines = []
+    # Header with file name
+    md_lines.append(f"**FILE:** {filename}\n\n")
+
+    # Iterate each message and format
+    for idx, msg in enumerate(conversation_messages_only, start=1):
+        md_lines.append("---\n\n")
+        md_lines.append(f"**Dictionary Item {idx:02d}**\n\n")
+        md_lines.append(f"**Role:** {msg.get('role','')}\n\n")
+        md_lines.append("**Content:**\n\n")
+        md_lines.append(f"{msg.get('content','')}\n\n")
+        md_lines.append("---\n")
+
     try:
         with open(markdown_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+            f.writelines(md_lines)
     except Exception as e:
         print(f"Error saving markdown: {e}")
         return jsonify({'error': 'Failed to save markdown file.'}), 500
