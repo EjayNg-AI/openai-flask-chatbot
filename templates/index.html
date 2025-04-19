@@ -393,7 +393,7 @@
               <option value="gpt-4o">gpt-4o</option>
               <option value="gpt-4.1">gpt-4.1</option>
               <option value="o1-pro">o1-pro</option>
-              <option value="o1">o1</option>
+              <option value="o3">o3</option>
               <option value="o4-mini">o4-mini</option>
               <option value="o3-mini">o3-mini</option>
               <option value="claude-3-7-sonnet-20250219">
@@ -785,18 +785,10 @@ For each **source code file**, provide the following metadata:
       });
 
     document.getElementById("load-btn").addEventListener("click", () => {
-      const conversationName = prompt("Enter the conversation name to load:");
-      if (!conversationName) {
-        alert("Conversation name is required.");
-        return;
-      }
-      // Open the /load endpoint with the conversation name as a query parameter in a new tab.
-      currentFileContents = "";
-      window.open(
-        `/load?name=${encodeURIComponent(conversationName)}`,
-        "_blank"
-      );
+      // this will cause the Flask handler to pop up a native file chooser
+      window.open("/load", "_blank");
     });
+
 
     document
       .getElementById("consolidate-btn")
@@ -971,21 +963,32 @@ For each **source code file**, provide the following metadata:
     SaveBtn.addEventListener("click", async () => {
       queryInput.value = "";
       autoResize();
-      const conversationName = prompt("Enter a name for your conversation:");
-      if (!conversationName) {
-        alert("Conversation name is required to save.");
-        return;
+
+      try {
+        const response = await fetch('/choose_save_path');
+        const data = await response.json();
+
+        if (response.ok && data.path) {
+          await saveConversation(data.path); // Pass the full path
+        } else if (data.error) {
+          // Handle cancellation or error from the dialog endpoint
+          console.log("Save cancelled or failed:", data.error);
+        } else {
+          console.log("Save cancelled by user.");
+        }
+      } catch (error) {
+        console.error("Error getting save path:", error);
+        alert("An error occurred while trying to open the save dialog.");
       }
-      // Proceed to save the conversation
-      await saveConversation(conversationName);
     });
 
-    async function saveConversation(conversationName) {
+
+    async function saveConversation(fullPath) {
       try {
         // Collect the markdown content from the editor
         const markdownContent = markdownInput.value;
 
-        // Send POST request to the backend
+        // Send POST request to the backend /save endpoint
         const response = await fetch("/save", {
           method: "POST",
           headers: {
@@ -993,7 +996,7 @@ For each **source code file**, provide the following metadata:
           },
           body: JSON.stringify({
             uniqueId: uniqueId,
-            name: conversationName,
+            full_path: fullPath,
             content: markdownContent,
           }),
         });
@@ -1001,7 +1004,7 @@ For each **source code file**, provide the following metadata:
         const result = await response.json();
 
         if (response.ok) {
-          alert("Conversation saved successfully!");
+          alert(`Conversation saved successfully to ${fullPath}!`);
         } else {
           alert(
             `Failed to save conversation: ${result.error || "Unknown error"}`
@@ -1311,41 +1314,28 @@ For each **source code file**, provide the following metadata:
         }
 
       } else if (node.type === "file") {
-        // 1. find the last “.” to get the extension
-        const lastDot = node.name.lastIndexOf(".");
-        const ext = lastDot > -1
-          ? node.name.slice(lastDot).toLowerCase()
-          : "";
-        // 2. strip *any* single extension off the end
-        const nameWithoutExt = lastDot > -1
-          ? node.name.slice(0, lastDot)
-          : node.name;
-        // 3. start convName as “name minus extension”
-        let convName = nameWithoutExt;
-        // 4. if it *was* a .json file, also drop a trailing “messages”
-        if (ext === ".json" && nameWithoutExt.toLowerCase().endsWith("messages")) {
-          convName = nameWithoutExt.slice(0,
-            nameWithoutExt.length - "messages".length);
-        }
-        // 5. (optionally) if you ended up with a stray dot at the end, trim it
-        convName = convName.replace(/\.$/, "");
-
-        // now build your link exactly as before, using this new convName
         const link = document.createElement("a");
         link.href = "#";
         link.className = "file-link";
         link.textContent = node.name;
-        link.onclick = e => {
+
+        link.onclick = (e) => {
           e.preventDefault();
+          if (!selectedFolder) {
+            alert("Open a folder first.");
+            return;
+          }
+          // relative path keeps the URL short & avoids leaking absolute paths
+          const relPath = node.path.substring(selectedFolder.length + 1);
           window.open(
-            `/load?name=${encodeURIComponent(convName)}`,
+            `/load_chat?rel=${encodeURIComponent(relPath)}`,
             "_blank"
           );
         };
+
         wrapper.appendChild(link);
         container.appendChild(wrapper);
       }
-
     }
 
     function loadDirectoryTree(tree) {
@@ -1357,7 +1347,7 @@ For each **source code file**, provide the following metadata:
     // “Open Directory” exactly as index2.html does:
     document.getElementById("open-folder").onclick = async () => {
       try {
-        const resp = await fetch("/open_folder", { method: "POST" });
+        const resp = await fetch("/open_folder_chat", { method: "POST" });
         const data = await resp.json();
         if (data.error) {
           alert(data.error);
@@ -1378,7 +1368,7 @@ For each **source code file**, provide the following metadata:
         return;
       }
       try {
-        const resp = await fetch("/refresh");
+        const resp = await fetch("/refresh_chat");
         const data = await resp.json();
         if (data.error) {
           alert(data.error);

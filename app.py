@@ -29,6 +29,9 @@ model_name_1 = None
 streaming_flag_1 = False
 counter_1 = 0
 
+# Global variable to store the selected folder path for chat
+selected_folder_chat = None 
+
 # Option corresponding to consolidation of conversation
 selected_option_consolidate = "fully_updated"
 
@@ -64,6 +67,11 @@ load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
+#— enable debug + auto‑reload of code & templates —
+app.config['DEBUG'] = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+#— disable caching of static files so changed JS/CSS/html always reloads —
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Configure with strong secret key
 app.secret_key = os.getenv('FLASK_SECRET_KEY') or os.urandom(24)
@@ -246,22 +254,35 @@ def update_math_render_state():
 def load_conversation():
     global loaded_conversation_messages
     global loading_new_file
-    global consolidate_conversation_flag
 
-    filename = request.args.get('name')
-    if not filename:
-        return jsonify({'error': 'Conversation name is required.'}), 400
+    # 1) Ask the user to pick any file
+    selected = choose_file()
+    if not selected:
+        return jsonify({'error': 'No file selected.'}), 400
 
-    conversation_path = os.path.join(CONVERSATIONS_DIR, f"{filename+'messages'}.json")
+    # 2) Compute your “conversation key” exactly as the tree‑view does
+    base = os.path.basename(selected)   # e.g. "123.md" or "foo.messages.json"
+    stem, ext = os.path.splitext(base)  # ("123", ".md") or ("foo.messages", ".json")
+    if ext.lower() == '.json' and stem.lower().endswith('messages'):
+        conv = stem[:-len('messages')]  # strip off trailing "messages"
+    else:
+        conv = stem                     # otherwise just the name before the last “.”
+    conv = conv.rstrip('.')             # guard against an accidental trailing dot
+
+    # 3) Build the full path in the same folder the file lived in
+    folder = os.path.dirname(selected)  # e.g. "/home/bin"
+    target = os.path.join(folder, f'{conv}messages.json')
+    
+    # 4) Load it
     try:
-        with open(conversation_path, 'r', encoding='utf-8') as f:
+        with open(target, 'r', encoding='utf-8') as f:
             loaded_conversation_messages = json.load(f)
     except FileNotFoundError:
-        return jsonify({'error': 'Conversation not found.'}), 404
+        return jsonify({'error': f'Conversation not found at {target}'}), 404
     except json.JSONDecodeError:
         return jsonify({'error': 'Error decoding JSON.'}), 500
     except Exception as e:
-        logger.info(f"Error loading conversation: {e}")
+        logger.error(f"Error loading {target}: {e}", exc_info=True)
         return jsonify({'error': 'Failed to load conversation.'}), 500
 
     loading_new_file = True
@@ -283,34 +304,87 @@ def consolidate_conversation():
     selected_option_consolidate = request.args.get("option", "fully_updated")
     return render_template('index.html')
 
+# Endpoint to trigger the native "Save As" dialog
+@app.route('/choose_save_path', methods=['GET'])
+def choose_save_path():
+    """
+    Opens a native 'Save As' dialog using Tkinter on the server side.
+    Returns the chosen file path to the client.
+    """
+    root = None
+    try:
+        root = tk.Tk()
+        root.withdraw()  # Hide the main Tkinter window
+        # Pop up the "Save As" dialog
+        file_path = filedialog.asksaveasfilename(
+            title="Save Conversation As...",
+            defaultextension=".md", # Default extension
+            filetypes=[("Markdown files", "*.md"), # File type filter
+                       ("Text files", "*.txt"),
+                       ("JSON files", "*.json")]
+        )
+        root.destroy() # Clean up the Tkinter root window
 
+        if file_path:
+            # User selected a path
+            return jsonify({'path': file_path})
+        else:
+            # User cancelled the dialog
+            return jsonify({'error': 'No path selected'}), 400
+    except Exception as e:
+        logger.error(f"Error opening save dialog: {e}", exc_info=True)
+        if root:
+            try:
+                root.destroy()
+            except: # nosec # Ignore errors during cleanup
+                pass
+        return jsonify({'error': 'Failed to open save dialog.'}), 500
+    
 
 # Save Conversation Endpoint
 @app.route('/save', methods=['POST'])
 def save_conversation():
     global message_accumulate
     data = request.get_json()
-    filename = data.get('name')
+    full_path = data.get('full_path')
     content = data.get('content')
     unique_id = data.get('uniqueId')
     counter = determine_counter(unique_id)
 
-    if not filename or not content:
-        return jsonify({'error': 'Conversation name and content are required.'}), 400
+    # Validate the received full path
+    if not full_path or not content:
+        return jsonify({'error': 'Full path and content are required.'}), 400
+
+    # Determine the directory and base filename from the full path
+    try:
+        save_directory = os.path.dirname(full_path)
+        base_filename = os.path.basename(full_path)
+        filename_stem, _ = os.path.splitext(base_filename) # Get name without extension
+
+        # Ensure the target directory exists (optional, but good practice)
+        os.makedirs(save_directory, exist_ok=True)
+
+        # Construct the paths using the chosen directory and derived names
+        markdown_path = os.path.join(save_directory, f"{filename_stem}.md")
+        json_path = os.path.join(save_directory, f"{filename_stem}messages.json")
+
+    except Exception as e:
+        logger.error(f"Error processing save path '{full_path}': {e}", exc_info=True)
+        return jsonify({'error': f'Invalid save path provided: {e}'}), 400
+
     
     conversation_messages_only = get_conversation_history(unique_id, counter)
-    conversation_path = os.path.join(CONVERSATIONS_DIR, f"{filename+'messages'}.json")
+
     try:
-        with open(conversation_path, 'w', encoding='utf-8') as f:
+        with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(conversation_messages_only, f, indent=2, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving conversation: {e}")
         return jsonify({'error': 'Failed to save conversation.'}), 500
 
-    markdown_path = os.path.join(CONVERSATIONS_DIR, f"{filename}.md")
     md_lines = []
     # Header with file name
-    md_lines.append(f"**FILE:** {filename}\n\n")
+    md_lines.append(f"**FILE:** {markdown_path}\n\n")
 
     # Iterate each message and format
     for idx, msg in enumerate(conversation_messages_only, start=1):
@@ -493,7 +567,7 @@ def stream():
 
 
 
-            elif "o4-mini" in model_name: 
+            elif "o4-mini" in model_name or "o3" in model_name: 
 
                 # Construct full prompt with system message
                 full_prompt = []
@@ -581,7 +655,7 @@ def stream():
                     yield json.dumps({'error': 'An error occurred while processing your request. Please try again.'}) + "\n"
 
 
-            elif ("o1" in model_name or "o3-mini" in model_name):
+            elif ("o3-mini" in model_name):
                 
                 # Construct full prompt with system message
                 full_prompt = []
@@ -820,6 +894,19 @@ def choose_folder():
     return folder_path
 
 
+
+def choose_file():
+    """Pop up a standard file‑open dialog and return the chosen path (or '' if cancelled)."""
+    root = tk.Tk()
+    root.withdraw()
+    path = filedialog.askopenfilename(
+        title="Select a conversation base file",
+        filetypes=[("All files","*.*")]
+    )
+    root.destroy()
+    return path
+
+
 def get_directory_structure(rootdir):
     """
     Recursively builds a directory structure.
@@ -918,17 +1005,113 @@ def clear_loaded_content():
 
 
 
-def find_available_port_iterative(start_port, end_port=65535):
-    for port in range(start_port, end_port):
+
+# -----------------------------------
+# Dedicated state for index.html
+# -----------------------------------
+
+
+@app.route('/open_folder_chat', methods=['POST'])          # <‑‑ NEW ❷
+def open_folder_chat():
+    """
+    Folder picker used ONLY by templates/index.html
+    """
+    global selected_folder_chat, global_file_contents
+    global_file_contents = ""
+    folder = choose_folder()
+    if folder:
+        selected_folder_chat = folder
+        return jsonify({
+            "folder": folder,
+            "structure": get_directory_structure(folder)
+        })
+    return jsonify({"error": "No folder selected"}), 400
+
+
+@app.route('/refresh_chat', methods=['GET'])               # <‑‑ NEW ❸
+def refresh_chat():
+    """
+    Refresh directory tree shown in templates/index.html
+    """
+    global selected_folder_chat, global_file_contents
+    global_file_contents = ""
+    if selected_folder_chat:
+        return jsonify({
+            "folder": selected_folder_chat,
+            "structure": get_directory_structure(selected_folder_chat)
+        })
+    return jsonify({"error": "No folder selected"}), 400
+
+@app.route('/load_chat', methods=['GET'])
+def load_chat():
+    """
+    Called when the user clicks a file in the left‑hand browser that
+    is rendered inside templates/index.html.
+    """
+
+    global selected_folder_chat
+    global loaded_conversation_messages
+    global loading_new_file
+
+    # ---------- 1. figure out which path the client sent ----------
+    rel = request.args.get("rel")        # relative path (recommended)
+    abs_path = request.args.get("abs")   # absolute path (fallback)
+
+    if rel:
+        if not selected_folder_chat:
+            return jsonify({"error": "No folder was opened in this session."}), 400
+        path = os.path.abspath(os.path.join(selected_folder_chat, rel))
+    elif abs_path:
+        path = os.path.abspath(abs_path)
+    else:
+        return jsonify({"error": "Missing file path."}), 400
+
+    # (optional) sanity‑check that the path is inside the chosen folder
+    if selected_folder_chat and not path.startswith(os.path.abspath(selected_folder_chat)):
+        return jsonify({"error": "Path outside selected folder."}), 400
+
+    # ---------- 2. decide which JSON to open ----------
+    stem, ext = os.path.splitext(path)
+    if ext.lower() == ".md":
+        conv_path = f"{stem}messages.json"
+    elif ext.lower() == ".txt":
+        conv_path = f"{stem}messages.json"
+    elif ext.lower() == ".json":
+        conv_path = path
+    else:
+        return jsonify({"error": "Click a .md or .json file to load a conversation."}), 400
+
+    if not os.path.isfile(conv_path):
+        return jsonify({"error": f"Conversation file not found: {conv_path}"}), 404
+
+    # ---------- 3. load it ----------
+    try:
+        with open(conv_path, "r", encoding="utf-8") as fh:
+            loaded_conversation_messages = json.load(fh)
+    except Exception as exc:  # noqa: BLE001  (keep traceback in log)
+        logger.error("Failed to load %s: %s", conv_path, exc, exc_info=True)
+        return jsonify({"error": "Failed to read conversation file."}), 500
+
+    loading_new_file = True
+    return render_template("index.html")
+
+
+
+def find_free(base=5000):
+    for p in range(base, 65536):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('127.0.0.1', port)):
-                return port
-    raise RuntimeError("No available port found.")
+            if s.connect_ex(("127.0.0.1", p)):
+                return p
+
+if __name__ == "__main__":
+    # decide the port only once, pass via env var
+    port = int(os.environ.get("DEV_PORT", find_free()))
+    os.environ["DEV_PORT"] = str(port)
+
+    print(f"Serving on http://127.0.0.1:{port}")
+    app.run(host="127.0.0.1",
+            port=port,
+            debug=True,
+            use_reloader=True)      
 
 
-
-if __name__ == '__main__':
-    print("Please wait while we find an available port for use.")
-    port = find_available_port_iterative(5000)
-    print(f"Serving on port {port}")
-    serve(app, host='127.0.0.1', port=port)
