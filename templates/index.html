@@ -49,19 +49,15 @@
       border-bottom: 1px solid #ddd;
     }
 
+
     .query-input {
       font-size: 16px;
       flex: 1;
-      /* Take up available horizontal space */
       resize: none;
-      /* Disable manual resizing */
       line-height: 1.2;
       min-height: 10px;
-      /* Approx. 1 line */
-      max-height: 100px;
-      /* Approx. 10 lines */
+      max-height: 70vh;
       overflow-y: auto;
-      /* Show scrollbar when content exceeds max-height */
       transition: height 0.2s ease;
       padding: 2.3px;
       border: 1px solid #ddd;
@@ -74,7 +70,7 @@
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
-      width: 120px;
+      width: 80px;
       /* Fixed width */
       height: 60px;
       /* Fixed height */
@@ -278,6 +274,27 @@
       gap: 5px;
     }
 
+    /* ─── Light‑mode fixes for the left “file‑browser” panel ─── */
+    body:not(.dark-mode) #file-browser {
+      background-color: #fafafa;
+      color: #111;
+    }
+
+    body:not(.dark-mode) #directory-tree .directory-entry,
+    body:not(.dark-mode) #directory-tree .toggle-triangle {
+      color: #222;
+    }
+
+    body:not(.dark-mode) #directory-tree a.file-link {
+      color: #007bff;
+    }
+
+    body:not(.dark-mode) #directory-tree a.file-link:hover {
+      color: #0056b3;
+    }
+
+
+
     /* ---------------- Dark Mode Styles ---------------- */
     /* When the body receives the "dark-mode" class the following rules apply */
     body.dark-mode {
@@ -318,16 +335,19 @@
     }
 
     #file-browser {
-      width: 20%;
+      width: 13%;
+      min-width: 120px;
       border-right: 1px solid #ccc;
-      padding: 10px;
+      padding: 8px;
       box-sizing: border-box;
       overflow-y: auto;
     }
 
     #file-browser button {
-      margin: 5px 0;
+      margin: 3px 0;
       width: 100%;
+      padding: 6px 8px;
+      font-size: 0.85em;
     }
 
     #directory-tree .node {
@@ -946,7 +966,7 @@ For each **source code file**, provide the following metadata:
     function autoResize() {
       queryInput.style.height = "auto"; // Reset height
       const scrollHeight = queryInput.scrollHeight;
-      const maxHeight = 150; // Should match CSS max-height
+      const maxHeight = 350;
       if (scrollHeight < maxHeight) {
         queryInput.style.height = scrollHeight + "px";
       } else {
