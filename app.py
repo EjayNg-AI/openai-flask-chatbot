@@ -29,6 +29,9 @@ model_name_1 = None
 streaming_flag_1 = False
 counter_1 = 0
 
+# Global variable to store markdown content
+loaded_markdown_content: str = ""
+
 # Global variable to store the selected folder path for chat
 selected_folder_chat = None 
 
@@ -186,6 +189,26 @@ def get_conversation_history(unique_id, counter):
     return conversation_history
 
 
+def get_markdown_for_conversation(path):
+    """
+    Given a .json or .md path, return the corresponding .md file's contents (if exists).
+    """
+    stem, ext = os.path.splitext(path)
+    if ext.lower() == ".json" and stem.endswith("messages"):
+        md_path = stem[:-len("messages")] + ".md"
+    elif ext.lower() in (".md", ".txt"):
+        md_path = stem + ".md"
+    else:
+        return None, None
+    if os.path.isfile(md_path):
+        try:
+            with open(md_path, "r", encoding="utf-8") as f:
+                return md_path, f.read()
+        except Exception as e:
+            return md_path, f"Error reading markdown file: {e}"
+    return md_path, ""
+
+
 @app.route('/')
 def index() -> str:
     global message_accumulate
@@ -210,6 +233,7 @@ def get_token():
     global selected_option_consolidate
     global unique_id_1
     global model_name_1
+    global loaded_markdown_content
     token = str(uuid.uuid4())
     if loading_new_file:
         for dict_msg in loaded_conversation_messages:
@@ -228,10 +252,13 @@ def get_token():
     loading_new_file = False
     c = consolidate_conversation_flag
     consolidate_conversation_flag = False
+    markdown_to_send = loaded_markdown_content or ""
+    loaded_markdown_content = ""   
     return jsonify({'token': token, 
                     'model_name': model_name,
                     'consolidate_conversation_flag': c,  
                     'consolidate_option': selected_option_consolidate,
+                    'markdown_content': markdown_to_send,
                     })  # Send token as JSON response
 
 
@@ -254,12 +281,14 @@ def update_math_render_state():
 def load_conversation():
     global loaded_conversation_messages
     global loading_new_file
+    global loaded_markdown_content
 
     # 1) Ask the user to pick any file
     selected = choose_file()
     if not selected:
         return jsonify({'error': 'No file selected.'}), 400
 
+    _, loaded_markdown_content = get_markdown_for_conversation(selected)
     # 2) Compute your “conversation key” exactly as the tree‑view does
     base = os.path.basename(selected)   # e.g. "123.md" or "foo.messages.json"
     stem, ext = os.path.splitext(base)  # ("123", ".md") or ("foo.messages", ".json")
@@ -970,6 +999,7 @@ def refresh():
 def load_selection():
     global selected_folder
     global global_file_contents
+    global loaded_markdown_content
     data = request.get_json()
     selected_files = data.get("files", [])
     result = ""
@@ -1052,6 +1082,7 @@ def load_chat():
     global selected_folder_chat
     global loaded_conversation_messages
     global loading_new_file
+    global loaded_markdown_content
 
     # ---------- 1. figure out which path the client sent ----------
     rel = request.args.get("rel")        # relative path (recommended)
@@ -1065,6 +1096,8 @@ def load_chat():
         path = os.path.abspath(abs_path)
     else:
         return jsonify({"error": "Missing file path."}), 400
+
+    _, loaded_markdown_content = get_markdown_for_conversation(path)
 
     # (optional) sanity‑check that the path is inside the chosen folder
     if selected_folder_chat and not path.startswith(os.path.abspath(selected_folder_chat)):
