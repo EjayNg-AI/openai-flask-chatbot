@@ -214,6 +214,7 @@
         padding: 20px;
         box-sizing: border-box;
         overflow: auto;
+        min-width: 0;
       }
 
       .editor {
@@ -300,6 +301,18 @@
       #markdown-input {
         white-space: pre-wrap;
         word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      #chat-panel,
+      .container,
+      .editor,
+      .preview {
+        min-width: 0;
+      }
+
+      .preview pre {
+        overflow-x: auto;
       }
 
       /* ---------------- Dark Mode Styles ---------------- */
@@ -341,7 +354,8 @@
       }
 
       #file-browser {
-        width: 13%;
+        flex: 0 0 240px;
+        height: 100%;
         min-width: 120px;
         border-right: 1px solid #ccc;
         padding: 8px;
@@ -493,12 +507,7 @@
         </div>
         <div class="container">
           <div class="editor">
-            <textarea
-              id="markdown-input"
-              readonly
-              readonly
-              wrap="soft"
-            ></textarea>
+            <textarea id="markdown-input"></textarea>
           </div>
           <div class="preview" id="preview"></div>
         </div>
@@ -861,29 +870,15 @@ For each **source code file**, provide the following metadata:
           consolidate_option = data.consolidate_option;
           const initialMarkdown = data.markdown_content || "";
           setTimeout(() => {
-            // Append the token to the markdown input value if markdownInput exists
             if (markdownInput) {
-              /* 
-              function escapeBackticks(content) {
-                return content.replace(/```/g, "\\`\\`\\`");
-              }
-
-              markdownInput.value += `\nInitial Markdown:\n\n\`\`\`markdown\n${escapeBackticks(
-                initialMarkdown
-              )}\n\`\`\`\n\n`;
-
-              let sanitizedMarkdown = sanitizeText(markdownInput.value);
-              markdownInput.value = sanitizedMarkdown;
-              // Force reflow
-              void markdownInput.offsetHeight;
-              // Optional: trigger scroll to bottom
+              let sanitizedMarkdown = sanitizeText(initialMarkdown);
+              markdownInput.value =
+                "<pre> \n" + sanitizedMarkdown + "\n </pre>";
               markdownInput.scrollTop = markdownInput.scrollHeight;
-              renderMarkdown(true); */
-              markdownInput.value = "";
-              markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+              markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
               markdownInput.value += `\n Model: ${model_name} \n`;
               markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
-
+              renderMarkdown(true);
               submitBtn.disabled = false;
               SaveBtn.disabled = false;
               choose_model.disabled = false;
