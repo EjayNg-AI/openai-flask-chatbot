@@ -315,6 +315,15 @@
         overflow-x: auto;
       }
 
+      /* normal light‑mode links */
+      #preview a {
+        color: #007bff; /* “normal” blue */
+        text-decoration: underline;
+      }
+      #preview a:hover {
+        color: #ff0000; /* normal red hover */
+      }
+
       /* ---------------- Dark Mode Styles ---------------- */
       /* When the body receives the "dark-mode" class the following rules apply */
       body.dark-mode {
@@ -342,6 +351,14 @@
       body.dark-mode pre {
         background-color: #2e2e2e;
         color: white;
+      }
+
+      /* dark‑mode overrides */
+      body.dark-mode #preview a {
+        color: #00ff00; /* bright green */
+      }
+      body.dark-mode #preview a:hover {
+        color: #ff0000; /* bright red hover */
       }
 
       /* ---------------- End Dark Mode Styles ---------------- */

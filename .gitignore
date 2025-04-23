@@ -1,3 +1,5 @@
+# Environment variables
+# VERY IMPORANT: This must never be exposed online
 .env
 
 # Python
@@ -12,6 +14,8 @@ __pycache__/
 venv/
 ENV/
 env/
+api/
+chatbot/
 
 # Flask instance folder
 instance/
