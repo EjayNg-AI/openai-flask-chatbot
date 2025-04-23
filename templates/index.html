@@ -872,8 +872,11 @@ For each **source code file**, provide the following metadata:
           setTimeout(() => {
             if (markdownInput) {
               let sanitizedMarkdown = sanitizeText(initialMarkdown);
+
+              const fence = "````";
               markdownInput.value =
-                "<pre> \n" + sanitizedMarkdown + "\n </pre>";
+                fence + "markdown\n" + sanitizedMarkdown + "\n" + fence;
+
               markdownInput.scrollTop = markdownInput.scrollHeight;
               markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
               markdownInput.value += `\n Model: ${model_name} \n`;
