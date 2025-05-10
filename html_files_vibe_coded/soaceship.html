@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativistic Spaceship Animation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111;
+            color: #eee;
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars if canvas is too big */
+        }
+        #animationCanvas {
+            border: 1px solid #555;
+            background-color: #000;
+            display: block; /* Remove extra space below canvas */
+        }
+        .controls, .info-panel {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 5px;
+            margin-top: 10px;
+            width: calc(100% - 40px); /* Adjust width based on padding */
+            max-width: 800px; /* Max width of controls */
+        }
+        .controls > div, .info-panel > div {
+            margin: 5px 15px;
+            text-align: center;
+        }
+        label {
+            margin-right: 5px;
+        }
+        input[type="range"] {
+            width: 120px; /* Adjust slider width */
+        }
+        #infoPanel {
+            border: 1px solid #444;
+            padding: 8px;
+            min-width: 280px; /* Ensure enough space for info */
+        }
+        #infoPanel div {
+            margin-bottom: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        h1 {
+            color: #0af;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Relativistic Starfield Observer</h1>
+
+    <canvas id="animationCanvas"></canvas>
+
+    <div class="controls">
+        <div>
+            <label for="starDensity">Star Density:</label>
+            <input type="range" id="starDensity" min="50" max="1000" value="300">
+            <span id="starDensityValue">300</span>
+        </div>
+        <div>
+            <label for="acceleration">Acceleration (dv/dt as %c / s):</label>
+            <input type="range" id="acceleration" min="0.01" max="5" value="0.5" step="0.01">
+            <span id="accelerationValue">0.50</span> %c/s
+        </div>
+        <div>
+            <label for="speedLimit">Speed Limit (% of c):</label>
+            <input type="range" id="speedLimit" min="10" max="99.99" value="90" step="0.01">
+            <span id="speedLimitValue">90.00</span> %
+        </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        <div>Velocity: <span id="velocityDisplay">0.0000 % c | 0.000e+0 m/s</span></div>
+        <div>Relativistic Mass: <span id="massDisplay">1.000e+6 kg</span></div>
+        <div>Lorentz Factor (γ): <span id="lorentzDisplay">1.0000</span></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Constants ---
+        const C_LIGHT_SPEED_MPS = 299792458; // m/s
+        const SIM_C = 1.0; // Speed of light in simulation units
+        const SHIP_REST_MASS_KG = 1.0e6; // Example: 1,000 metric tons
+        const SIM_REST_MASS = 1.0; // Rest mass in simulation units
+
+        // --- Simulation Parameters (from sliders) ---
+        let numStars = 300;
+        let shipAccelerationInput = 0.5; // %c per second
+        let speedLimitInput = 90.0; // % of c
+
+        // --- Simulation State ---
+        let current_v_sim = 0.0; // Current velocity in simulation units (fraction of SIM_C)
+        let stars = [];
+        let lastTimestamp = 0;
+
+        // --- Star Properties ---
+        const STAR_BASE_SIZE = 1.5; // Base radius of a star at z=1
+        const STAR_NEAR_PLANE = 0.1;
+        const STAR_FAR_PLANE = 50;
+        const STAR_BASE_SPEED_Z = 0.5; // Base speed at which z decreases per second
+        const STAR_VELOCITY_Z_FACTOR = 5; // How much current velocity influences z decrease
+        const HORIZONTAL_FOV = Math.PI / 2.5; // 72 degrees
+        let fieldOfViewScale;
+
+        function resizeCanvas() {
+            const aspectRatio = 16 / 9;
+            let newWidth = window.innerWidth * 0.9;
+            if (newWidth > 800) newWidth = 800; // Max width
+            let newHeight = newWidth / aspectRatio;
+
+            if (window.innerHeight * 0.5 < newHeight) { // If too tall for screen
+                newHeight = window.innerHeight * 0.5;
+                newWidth = newHeight * aspectRatio;
+            }
+            
+            canvas.width = Math.floor(newWidth);
+            canvas.height = Math.floor(newHeight);
+            
+            fieldOfViewScale = canvas.width / (2 * Math.tan(HORIZONTAL_FOV / 2));
+        }
+
+
+        function createStar() {
+            // initial_theta_rest: Angle from positive z-axis (direction of motion) in star's rest frame. (0 to PI)
+            // initial_phi_rest: Azimuthal angle in x-y plane. (0 to 2*PI)
+            const initial_theta_rest = Math.acos(2 * Math.random() - 1); // Uniform spherical distribution
+            const initial_phi_rest = Math.random() * 2 * Math.PI;
+            
+            // Base color (HSL)
+            const baseHue = 30 + Math.random() * 60; // Yellowish to orange-ish white
+            const baseSaturation = Math.random() * 30 + 30; // Low to moderate saturation
+            const baseLightness = Math.random() * 30 + 60; // Mostly bright
+
+            return {
+                z: STAR_NEAR_PLANE + Math.random() * (STAR_FAR_PLANE - STAR_NEAR_PLANE), // Depth
+                initial_theta_rest: initial_theta_rest,
+                initial_phi_rest: initial_phi_rest,
+                baseHue: baseHue,
+                baseSaturation: baseSaturation,
+                baseLightness: baseLightness,
+                sizeFactor: 0.5 + Math.random() * 0.5 // Randomize base size slightly
+            };
+        }
+
+        function initializeStars() {
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push(createStar());
+            }
+        }
+
+        function updatePhysics(dt) {
+            const max_v_sim = (speedLimitInput / 100.0) * SIM_C;
+            const actual_acceleration_sim = (shipAccelerationInput / 100.0) * SIM_C; // dv is %c
+
+            if (current_v_sim < max_v_sim) {
+                current_v_sim += actual_acceleration_sim * dt;
+            }
+            current_v_sim = Math.min(current_v_sim, max_v_sim);
+            
+            // Ensure velocity doesn't quite reach SIM_C to avoid Infinity for gamma
+            if (current_v_sim >= SIM_C) {
+                current_v_sim = SIM_C * 0.9999999999; 
+            }
+
+            const beta = current_v_sim / SIM_C;
+            let gamma = 1.0;
+            if (beta > 0 && beta < 1) { // Avoid division by zero or NaN if beta is 0 or 1
+                 gamma = 1 / Math.sqrt(1 - beta * beta);
+            } else if (beta >= 1) { // Should be caught by the cap above
+                 gamma = Infinity;
+            }
+
+
+            // Update display panel
+            document.getElementById('velocityDisplay').textContent = 
+                `${(beta * 100).toFixed(4)} % c | ${(current_v_sim * C_LIGHT_SPEED_MPS).toExponential(3)} m/s`;
+            document.getElementById('massDisplay').textContent = 
+                `${(gamma * SHIP_REST_MASS_KG).toExponential(3)} kg`;
+            document.getElementById('lorentzDisplay').textContent = gamma.toFixed(4);
+
+            return { beta, gamma };
+        }
+
+        function updateAndDrawStars(dt, beta, gamma) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            stars.forEach(star => {
+                // Update star depth (visual effect of moving through space)
+                star.z -= (STAR_BASE_SPEED_Z + current_v_sim * STAR_VELOCITY_Z_FACTOR) * dt;
+                if (star.z < STAR_NEAR_PLANE) {
+                    Object.assign(star, createStar()); // Reset star
+                    star.z = STAR_FAR_PLANE; // Place it at the far end
+                }
+
+                // Relativistic Aberration
+                const cos_initial_theta_rest = Math.cos(star.initial_theta_rest);
+                const sin_initial_theta_rest = Math.sin(star.initial_theta_rest);
+
+                // Angle observed in ship's frame (theta_ship)
+                // cos_theta_ship = (cos_initial_theta_rest + beta) / (1 + beta * cos_initial_theta_rest) -> this is for aberration of light source moving
+                // For light source at rest and observer moving:
+                // cos_theta_ship = (cos_initial_theta_rest - beta) / (1 - beta * cos_initial_theta_rest); if theta is angle to direction of motion
+                // Let's use the standard formula where theta_rest is angle between line of sight and relative velocity in star's frame.
+                // If ship moves along +z, star at (0,0,Z) has theta_rest=0. Star at (0,0,-Z) has theta_rest=PI.
+                // theta_ship is the observed angle from the direction of motion.
+                let cos_theta_ship = (cos_initial_theta_rest + beta) / (1 + beta * cos_initial_theta_rest);
+                
+                // Clamp cos_theta_ship to avoid floating point issues with acos
+                cos_theta_ship = Math.max(-1.0, Math.min(1.0, cos_theta_ship));
+                const theta_ship = Math.acos(cos_theta_ship);
+
+                // Only draw stars in the forward hemisphere (theta_ship < PI/2 means cos_theta_ship > 0)
+                if (cos_theta_ship <= 0) { // Star is behind or exactly at 90 deg (can be problematic for tan)
+                    return;
+                }
+                
+                // Projection onto 2D screen
+                // proj_factor is tan(theta_ship)
+                const proj_factor = Math.tan(theta_ship); 
+                
+                const screenX = centerX + fieldOfViewScale * proj_factor * Math.cos(star.initial_phi_rest);
+                const screenY = centerY + fieldOfViewScale * proj_factor * Math.sin(star.initial_phi_rest);
+
+                // Relativistic Doppler Effect & Beaming
+                // f_obs / f_rest = gamma * (1 + beta * cos_theta_ship_incoming_light)
+                // Here, cos_theta_ship is angle to star in ship's frame, so light comes from there.
+                // So cos_theta_ship_incoming_light = cos_theta_ship.
+                const doppler_freq_factor = gamma * (1 - beta * cos_theta_ship); // This is for source moving away.
+                                                                                // For source moving towards, or observer moving towards source:
+                                                                                // D = gamma * (1 + beta * cos_theta_observed_direction)
+                                                                                // where theta_observed_direction is angle to star in ship frame.
+                                                                                // So, cos_theta_ship is correct here.
+                // Let's use the formula f_obs/f_src = gamma * (1 + beta * cos(alpha_observer))
+                // where alpha_observer is the angle of the incoming light ray with respect to the ship's velocity vector.
+                // This is theta_ship. So cos(alpha_observer) = cos_theta_ship.
+                // This means for stars ahead (theta_ship=0, cos_theta_ship=1), D = gamma*(1+beta) = sqrt((1+beta)/(1-beta)) -> Blueshift
+                // For stars at 90 deg (theta_ship=PI/2, cos_theta_ship=0), D = gamma -> Blueshift (Transverse Doppler)
+                // This seems to be the common convention for f_obs/f_src.
+                const effective_doppler_factor = gamma * (1 + beta * cos_theta_ship);
+
+
+                // Color shift (HSL)
+                const hue_shift_amount = (effective_doppler_factor - 1) * 30; // Blueshift increases hue value (e.g. yellow->green->blue)
+                                                                        // Redshift decreases (yellow->orange->red)
+                                                                        // Let's make blueshift decrease hue (towards blue/violet)
+                let shiftedHue = star.baseHue - hue_shift_amount;
+                shiftedHue = (shiftedHue % 360 + 360) % 360; // Normalize hue to 0-360
+
+                // Brightness (relativistic beaming makes things brighter in direction of motion)
+                // Intensity I_obs ~ D^3 or D^4. Let's use D^2 for lightness factor.
+                const brightness_factor = Math.pow(effective_doppler_factor, 2);
+                let shiftedLightness = star.baseLightness * brightness_factor;
+                shiftedLightness = Math.min(100, Math.max(0, shiftedLightness)); // Clamp 0-100
+
+                let shiftedSaturation = star.baseSaturation / Math.sqrt(effective_doppler_factor);
+                shiftedSaturation = Math.min(100, Math.max(0, shiftedSaturation));
+
+
+                // Star size
+                // Base size depends on z depth. Further away = smaller.
+                // Also, Doppler effect can influence apparent size (photons more energetic/dense)
+                let size = (STAR_BASE_SIZE * star.sizeFactor / star.z) * (1 + Math.log1p(Math.max(0, effective_doppler_factor -1))); // Slightly larger if blueshifted
+                size = Math.max(0.5, size); // Minimum size
+
+
+                if (screenX > 0 && screenX < canvas.width && screenY > 0 && screenY < canvas.height) {
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY, size, 0, 2 * Math.PI);
+                    ctx.fillStyle = `hsl(${shiftedHue}, ${shiftedSaturation}%, ${shiftedLightness}%)`;
+                    ctx.fill();
+                }
+            });
+        }
+
+        function animationLoop(timestamp) {
+            const dt = (timestamp - (lastTimestamp || timestamp)) / 1000; // Delta time in seconds
+            lastTimestamp = timestamp;
+
+            if (dt > 0.1) { // If tab was inactive, dt might be large, cap it
+                // console.warn("Large delta time:", dt, " capping to 0.1s");
+                // requestAnimationFrame(animationLoop); // Skip frame if dt is too large to prevent jump
+                // return;
+            }
+            
+            const { beta, gamma } = updatePhysics(Math.min(dt, 0.1)); // Cap dt to avoid large jumps
+            updateAndDrawStars(Math.min(dt, 0.1), beta, gamma);
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- Event Listeners for Controls ---
+        const starDensitySlider = document.getElementById('starDensity');
+        const accelerationSlider = document.getElementById('acceleration');
+        const speedLimitSlider = document.getElementById('speedLimit');
+
+        starDensitySlider.addEventListener('input', (e) => {
+            numStars = parseInt(e.target.value);
+            document.getElementById('starDensityValue').textContent = numStars;
+            initializeStars(); // Re-create stars with new density
+        });
+
+        accelerationSlider.addEventListener('input', (e) => {
+            shipAccelerationInput = parseFloat(e.target.value);
+            document.getElementById('accelerationValue').textContent = shipAccelerationInput.toFixed(2);
+        });
+
+        speedLimitSlider.addEventListener('input', (e) => {
+            speedLimitInput = parseFloat(e.target.value);
+            document.getElementById('speedLimitValue').textContent = speedLimitInput.toFixed(2);
+        });
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initializeStars(); // Re-initialize stars for new canvas dimensions if needed (FOV scale changes)
+        });
+
+        // --- Initialization ---
+        resizeCanvas();
+        initializeStars();
+        // Set initial slider display values
+        document.getElementById('starDensityValue').textContent = starDensitySlider.value;
+        document.getElementById('accelerationValue').textContent = parseFloat(accelerationSlider.value).toFixed(2);
+        document.getElementById('speedLimitValue').textContent = parseFloat(speedLimitSlider.value).toFixed(2);
+        
+        requestAnimationFrame(animationLoop);
+
+    </script>
+</body>
+</html>

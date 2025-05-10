@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativistic Spaceship Animation (Improved)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111;
+            color: #eee;
+            margin: 0;
+            padding-bottom: 20px; /* Space for controls if screen is short */
+        }
+        #animationCanvas {
+            border: 1px solid #555;
+            background-color: #000;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px; /* Max width of all controls area */
+        }
+        .simulation-controls, .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            background-color: #222;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            width: calc(100% - 20px);
+        }
+        .simulation-controls > div, .action-buttons > button {
+            margin: 5px 10px;
+            text-align: center;
+        }
+        .action-buttons > button {
+            padding: 8px 15px;
+            background-color: #0af;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .action-buttons > button:hover {
+            background-color: #08d;
+        }
+        label {
+            margin-right: 5px;
+            font-size: 0.9em;
+        }
+        input[type="range"] {
+            width: 100px;
+            vertical-align: middle;
+        }
+        .info-panel {
+            padding: 10px;
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            width: calc(100% - 20px);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85em;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive columns */
+            gap: 8px;
+        }
+        .info-panel > div {
+            padding: 4px;
+            background-color: #282828;
+            border-radius: 3px;
+        }
+        h1 {
+            color: #0af;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .value-display {
+            min-width: 50px;
+            display: inline-block;
+            text-align: right;
+            font-weight: bold;
+            color: #0f8;
+        }
+        .unit-display {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Relativistic Starfield Observer</h1>
+
+    <canvas id="animationCanvas"></canvas>
+
+    <div class="controls-container">
+        <div class="action-buttons">
+            <button id="playPauseButton">Pause</button>
+            <button id="resetVelocityButton">Reset Velocity</button>
+        </div>
+
+        <div class="simulation-controls">
+            <div>
+                <label for="starDensity">Star Density:</label>
+                <input type="range" id="starDensity" min="50" max="1000" value="300">
+                <span id="starDensityValue" class="value-display">300</span>
+            </div>
+            <div>
+                <label for="acceleration">Acceleration (%c/s):</label>
+                <input type="range" id="acceleration" min="0.01" max="5" value="0.5" step="0.01">
+                <span id="accelerationValue" class="value-display">0.50</span>
+            </div>
+            <div>
+                <label for="speedLimit">Speed Limit (%c):</label>
+                <input type="range" id="speedLimit" min="10" max="99.99" value="90" step="0.01">
+                <span id="speedLimitValue" class="value-display">90.00</span>
+            </div>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <div>Velocity (%c): <span id="velocityDisplayPercentC" class="value-display">0.0000</span> <span class="unit-display">% c</span></div>
+            <div>Velocity (m/s): <span id="velocityDisplayMPS" class="value-display">0.0e+0</span> <span class="unit-display">m/s</span></div>
+            <div>Lorentz Factor (γ): <span id="lorentzDisplay" class="value-display">1.0000</span></div>
+            <div>Total Energy (E=γm₀c²): <span id="energyDisplay" class="value-display">0.000</span> <span class="unit-display">EJ</span> (m₀=10⁶kg)</div>
+            <div>Earth Time Elapsed: <span id="earthTimeDisplay" class="value-display">0.00</span> <span class="unit-display">s</span></div>
+            <div>Ship Time Elapsed: <span id="shipTimeDisplay" class="value-display">0.00</span> <span class="unit-display">s</span></div>
+            <div>Distance Travelled: <span id="distanceDisplay" class="value-display">0.000</span> <span class="unit-display">ly</span></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Constants ---
+        const C_LIGHT_SPEED_MPS = 299792458; // m/s
+        const C_LIGHT_SPEED_LYPY = 1; // Light years per year
+        const SECONDS_PER_YEAR = 365.25 * 24 * 3600;
+        const SIM_C = 1.0; // Speed of light in simulation units
+        const SHIP_REST_MASS_KG = 1.0e6; // 1,000 metric tons
+
+        // --- Simulation Parameters (from sliders) ---
+        let numStars = 300;
+        let shipAccelerationInput = 0.5; // %c per second
+        let speedLimitInput = 90.0; // % of c
+
+        // --- Simulation State ---
+        let current_v_sim = 0.0; // Current velocity in simulation units (fraction of SIM_C)
+        let stars = [];
+        let lastTimestamp = 0;
+        let animationRunning = true;
+        let totalEarthTime = 0;
+        let totalShipTime = 0;
+        let totalDistanceMeters = 0;
+
+        // --- Star Properties ---
+        const STAR_BASE_SIZE = 1.0; // Base radius of a star at a reference distance
+        const STAR_MIN_DISTANCE = 5;  // Min distance for a star (affects max base size)
+        const STAR_MAX_DISTANCE = 100; // Max distance for a star (affects min base size)
+        const HORIZONTAL_FOV = Math.PI / 2.2; // ~81 degrees
+        let fieldOfViewScale;
+
+        function resizeCanvas() {
+            const aspectRatio = 16 / 9;
+            let newWidth = window.innerWidth * 0.95;
+            if (newWidth > 900) newWidth = 900; 
+            let newHeight = newWidth / aspectRatio;
+
+            const maxHeight = window.innerHeight * 0.60; // Max 60% of viewport height
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
+                newWidth = newHeight * aspectRatio;
+            }
+            
+            canvas.width = Math.floor(newWidth);
+            canvas.height = Math.floor(newHeight);
+            
+            fieldOfViewScale = canvas.width / (2 * Math.tan(HORIZONTAL_FOV / 2));
+        }
+
+        function createStar() {
+            const initial_theta_rest = Math.acos(2 * Math.random() - 1); // Uniform spherical distribution (0 to PI)
+            const initial_phi_rest = Math.random() * 2 * Math.PI;       // Azimuthal angle (0 to 2*PI)
+            
+            let baseHue, baseSaturation, baseLightness;
+            const randColor = Math.random();
+            if (randColor < 0.7) { // 70% are red-orange-yellow (M, K, G types)
+                baseHue = Math.random() * 60; 
+                baseSaturation = 70 + Math.random() * 30;
+                baseLightness = 60 + Math.random() * 20;
+            } else if (randColor < 0.95) { // 25% are yellow-white-bluish white (F, A types)
+                baseHue = 40 + Math.random() * 160; // Yellow to Cyan
+                baseSaturation = Math.random() * 40 + 10; // Lower saturation for whiter stars
+                baseLightness = 70 + Math.random() * 25;
+            } else { // 5% are blue/violet (B, O types)
+                baseHue = 200 + Math.random() * 60; 
+                baseSaturation = 70 + Math.random() * 30;
+                baseLightness = 65 + Math.random() * 25;
+            }
+
+            return {
+                distance: STAR_MIN_DISTANCE + Math.random() * (STAR_MAX_DISTANCE - STAR_MIN_DISTANCE), // Fixed distance
+                initial_theta_rest: initial_theta_rest, // Angle from Z-axis in galaxy frame
+                initial_phi_rest: initial_phi_rest,     // Angle in X-Y plane in galaxy frame
+                baseHue: baseHue,
+                baseSaturation: baseSaturation,
+                baseLightness: baseLightness,
+                sizeFactor: 0.7 + Math.random() * 0.6 // Randomize base size slightly
+            };
+        }
+
+        function initializeStars() {
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push(createStar());
+            }
+        }
+
+        function updatePhysics(dt) {
+            if (!animationRunning) return { beta: current_v_sim / SIM_C, gamma: 1 / Math.sqrt(1 - (current_v_sim/SIM_C)**2 || 1) };
+
+            const max_v_sim = (speedLimitInput / 100.0) * SIM_C;
+            const actual_acceleration_sim = (shipAccelerationInput / 100.0) * SIM_C;
+
+            if (current_v_sim < max_v_sim) {
+                current_v_sim += actual_acceleration_sim * dt;
+            }
+            current_v_sim = Math.min(current_v_sim, max_v_sim);
+            
+            // Cap velocity just below SIM_C to avoid Infinity for gamma if max_v_sim is 1.0
+            if (current_v_sim >= SIM_C) {
+                current_v_sim = SIM_C * 0.999999999999; 
+            }
+
+            const beta = current_v_sim / SIM_C; // current_v_sim is already fraction of SIM_C if SIM_C=1
+            let gamma = 1.0;
+            if (beta > 0 && beta < 1) {
+                 gamma = 1 / Math.sqrt(1 - beta * beta);
+            } else if (beta >= 1) {
+                 gamma = Infinity; // Should be caught by cap
+            }
+            
+            totalEarthTime += dt;
+            if (gamma > 0 && isFinite(gamma)) totalShipTime += dt / gamma;
+            totalDistanceMeters += (beta * C_LIGHT_SPEED_MPS) * dt;
+
+            // Update display panel
+            const velocityPercentC = beta * 100;
+            const velDisplayPercentC = document.getElementById('velocityDisplayPercentC');
+            velDisplayPercentC.textContent = velocityPercentC.toFixed(4);
+            if (beta > 0.99) velDisplayPercentC.style.color = '#ff4500'; // Red
+            else if (beta > 0.9) velDisplayPercentC.style.color = '#ffa500'; // Orange
+            else velDisplayPercentC.style.color = '#0f8';
+
+
+            document.getElementById('velocityDisplayMPS').textContent = (beta * C_LIGHT_SPEED_MPS).toExponential(3);
+            document.getElementById('lorentzDisplay').textContent = gamma.toFixed(4);
+            
+            const totalEnergyEJ = (gamma * SHIP_REST_MASS_KG * C_LIGHT_SPEED_MPS * C_LIGHT_SPEED_MPS) / 1e18;
+            document.getElementById('energyDisplay').textContent = totalEnergyEJ.toExponential(3);
+            
+            document.getElementById('earthTimeDisplay').textContent = totalEarthTime.toFixed(2);
+            document.getElementById('shipTimeDisplay').textContent = totalShipTime.toFixed(2);
+            const distanceLY = totalDistanceMeters / (C_LIGHT_SPEED_MPS * SECONDS_PER_YEAR);
+            document.getElementById('distanceDisplay').textContent = distanceLY.toExponential(3);
+
+            return { beta, gamma };
+        }
+        
+        function drawCMBGlow(beta, gamma) {
+            if (beta > 0.99) { // Only at very high speeds
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                // Intensity scales from beta=0.99 to beta=0.9999 (max speed limit)
+                let cmb_intensity_factor = (beta - 0.99) / (0.9999 - 0.99); 
+                cmb_intensity_factor = Math.min(1, Math.max(0, cmb_intensity_factor));
+                
+                let cmb_alpha = cmb_intensity_factor * 0.15; // Max alpha 0.15
+
+                if (cmb_alpha > 0) {
+                    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, canvas.width / 2.5);
+                    // Faint blue, more intense at center
+                    gradient.addColorStop(0, `rgba(173, 216, 230, ${cmb_alpha})`); // Light blue
+                    gradient.addColorStop(0.3 + cmb_intensity_factor * 0.3, `rgba(100, 149, 237, ${cmb_alpha * 0.5})`); // Cornflower blue
+                    gradient.addColorStop(1, `rgba(0, 0, 139, 0)`); // Dark blue, transparent
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        }
+
+        function updateAndDrawStars(dt, beta, gamma) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Draw CMB glow first if applicable
+            drawCMBGlow(beta, gamma);
+
+            stars.forEach(star => {
+                // Relativistic Aberration:
+                // cos_theta_ship = (cos_initial_theta_rest + beta) / (1 + beta * cos_initial_theta_rest)
+                // This formula calculates the apparent angular position (theta_ship) of a star in the ship's frame,
+                // where initial_theta_rest is the star's true angular position in the galaxy's rest frame
+                // (both angles relative to the direction of motion). It correctly shifts stars towards the forward direction.
+                const cos_initial_theta_rest = Math.cos(star.initial_theta_rest);
+                let cos_theta_ship = (cos_initial_theta_rest + beta) / (1 + beta * cos_initial_theta_rest);
+                
+                cos_theta_ship = Math.max(-1.0, Math.min(1.0, cos_theta_ship)); // Clamp for precision issues
+                const theta_ship = Math.acos(cos_theta_ship);
+
+                // Projection
+                const proj_factor = Math.tan(theta_ship); 
+                const screenX = centerX + fieldOfViewScale * proj_factor * Math.cos(star.initial_phi_rest);
+                const screenY = centerY + fieldOfViewScale * proj_factor * Math.sin(star.initial_phi_rest);
+
+                // Relativistic Doppler Effect for frequency/energy: D = γ(1 + β cosθ_obs_incoming_light)
+                // Here, theta_ship is the angle to the *apparent position* of the star.
+                // The light is coming *from* this direction. So, cosθ_obs_incoming_light = cos(theta_ship).
+                // No, this is not quite right. The Doppler factor depends on the angle of the *incoming light ray* in the observer's frame
+                // with respect to the observer's velocity. If theta_ship is the apparent direction *to* the star,
+                // then the light comes from that direction.
+                // D = γ (1 - β cos θ_ship_apparent_source_angle) if θ is angle to source.
+                // Or D = γ (1 + β cos θ_ship_light_arrival_angle) if θ is angle of light arrival.
+                // If star is at apparent angle theta_ship, light arrives from theta_ship.
+                // So, cos(angle of light arrival w.r.t. -v) = cos(theta_ship).
+                // The standard formula for Doppler shift factor (f_obs/f_rest) is D = γ(1 + β cos α_obs),
+                // where α_obs is the angle between the incoming light ray and the *observer's velocity vector* in the observer's frame.
+                // If theta_ship is the angle of the star's apparent position from the direction of motion, then α_obs = theta_ship.
+                const effective_doppler_factor = gamma * (1 + beta * cos_theta_ship);
+
+
+                // Color shift (HSL)
+                const hue_shift_per_D_unit = 60; // How much hue changes for (D-1)
+                let shiftedHue = star.baseHue + hue_shift_per_D_unit * (effective_doppler_factor - 1);
+                shiftedHue = (shiftedHue % 360 + 360) % 360;
+
+                // Saturation: reduce for high blueshift (tends to white-hot)
+                let shiftedSaturation = star.baseSaturation;
+                if (effective_doppler_factor > 1) { // Blueshift
+                    shiftedSaturation /= (1 + Math.log1p(effective_doppler_factor - 1));
+                } else { // Redshift
+                    shiftedSaturation *= (1 + Math.log1p(1 - effective_doppler_factor) * 0.5); // Slightly deepen color for redshift
+                }
+                shiftedSaturation = Math.min(100, Math.max(0, shiftedSaturation));
+
+                // Brightness (relativistic beaming makes things brighter in direction of motion)
+                // Intensity I_obs ~ D^3 or D^4. Using D^3.
+                const brightness_factor = Math.pow(Math.max(0, effective_doppler_factor), 3);
+                let shiftedLightness = star.baseLightness * brightness_factor;
+                shiftedLightness = Math.min(100, Math.max(0, shiftedLightness));
+
+                // Star size: base size inversely proportional to fixed distance.
+                // Optional: slight increase with Doppler factor for "energy".
+                let size = (STAR_BASE_SIZE * star.sizeFactor / star.distance) * (1 + Math.log1p(Math.max(0, effective_doppler_factor -1))*0.1);
+                size = Math.max(0.5, Math.min(size, 15)); // Min size 0.5, max visual size 15
+
+
+                if (screenX > -size && screenX < canvas.width + size && 
+                    screenY > -size && screenY < canvas.height + size &&
+                    cos_theta_ship > -0.1) { // Only draw if mostly in front (cos_theta_ship > 0 means forward hemisphere)
+                                            // -0.1 allows stars slightly past 90deg to still render if large enough
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY, size, 0, 2 * Math.PI);
+                    ctx.fillStyle = `hsl(${shiftedHue}, ${shiftedSaturation}%, ${shiftedLightness}%)`;
+                    ctx.fill();
+                }
+            });
+        }
+
+        function animationLoop(timestamp) {
+            const dt = Math.min(0.1, (timestamp - (lastTimestamp || timestamp)) / 1000); // Delta time in seconds, capped
+            lastTimestamp = timestamp;
+
+            if (animationRunning || dt > 0) { // dt > 0 ensures one update on unpause if dt was large
+                const { beta, gamma } = updatePhysics(dt);
+                updateAndDrawStars(dt, beta, gamma);
+            }
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- Event Listeners for Controls ---
+        const starDensitySlider = document.getElementById('starDensity');
+        const accelerationSlider = document.getElementById('acceleration');
+        const speedLimitSlider = document.getElementById('speedLimit');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const resetVelocityButton = document.getElementById('resetVelocityButton');
+
+        starDensitySlider.addEventListener('input', (e) => {
+            numStars = parseInt(e.target.value);
+            document.getElementById('starDensityValue').textContent = numStars;
+            initializeStars(); 
+        });
+
+        accelerationSlider.addEventListener('input', (e) => {
+            shipAccelerationInput = parseFloat(e.target.value);
+            document.getElementById('accelerationValue').textContent = shipAccelerationInput.toFixed(2);
+        });
+
+        speedLimitSlider.addEventListener('input', (e) => {
+            speedLimitInput = parseFloat(e.target.value);
+            document.getElementById('speedLimitValue').textContent = speedLimitInput.toFixed(2);
+        });
+
+        playPauseButton.addEventListener('click', () => {
+            animationRunning = !animationRunning;
+            playPauseButton.textContent = animationRunning ? "Pause" : "Play";
+            if (animationRunning) lastTimestamp = performance.now(); // Reset timestamp on resume to avoid jump
+        });
+
+        resetVelocityButton.addEventListener('click', () => {
+            current_v_sim = 0.0;
+            totalEarthTime = 0;
+            totalShipTime = 0;
+            totalDistanceMeters = 0;
+            // Force an immediate update of physics and display to show reset values
+            const { beta, gamma } = updatePhysics(0); 
+            updateAndDrawStars(0, beta, gamma); // Redraw with reset state
+            if (!animationRunning) { // If paused, ensure the display updates
+                 const velDisplayPercentC = document.getElementById('velocityDisplayPercentC');
+                 velDisplayPercentC.textContent = "0.0000";
+                 velDisplayPercentC.style.color = '#0f8';
+                 document.getElementById('velocityDisplayMPS').textContent = "0.0e+0";
+                 document.getElementById('lorentzDisplay').textContent = "1.0000";
+                 document.getElementById('energyDisplay').textContent = (SHIP_REST_MASS_KG * C_LIGHT_SPEED_MPS * C_LIGHT_SPEED_MPS / 1e18).toExponential(3);
+                 document.getElementById('earthTimeDisplay').textContent = "0.00";
+                 document.getElementById('shipTimeDisplay').textContent = "0.00";
+                 document.getElementById('distanceDisplay').textContent = "0.000e+0";
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            // No need to re-initialize stars on resize if their definition is independent of canvas size
+            // but fieldOfViewScale changes, so a redraw is good.
+            const beta = current_v_sim / SIM_C;
+            const gamma = 1 / Math.sqrt(1 - beta * beta || 1);
+            updateAndDrawStars(0, beta, gamma); // Redraw with current state
+        });
+
+        // --- Initialization ---
+        resizeCanvas();
+        initializeStars();
+        document.getElementById('starDensityValue').textContent = starDensitySlider.value;
+        document.getElementById('accelerationValue').textContent = parseFloat(accelerationSlider.value).toFixed(2);
+        document.getElementById('speedLimitValue').textContent = parseFloat(speedLimitSlider.value).toFixed(2);
+        
+        // Initial display update for non-animated values
+        const initialEnergyEJ = (SHIP_REST_MASS_KG * C_LIGHT_SPEED_MPS * C_LIGHT_SPEED_MPS) / 1e18;
+        document.getElementById('energyDisplay').textContent = initialEnergyEJ.toExponential(3);
+
+        requestAnimationFrame(animationLoop);
+    </script>
+</body>
+</html>

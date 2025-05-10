@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Corporate Website</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --light-bg: #f5f6fa;
+      --light-bg-alt: #e1e3ea;
+      --light-header: #fff;
+      --light-footer: #222;
+      --light-footer-text: #fff;
+      --light-primary: #0057b8;
+      --light-text: #111;
+      --light-nav-hover: #e1e3ea;
+      --light-overlay: rgba(0,0,0,0.6);
+
+      --dark-bg: #23272f;
+      --dark-bg-alt: #2e323a;
+      --dark-header: #181a20;
+      --dark-footer: #111;
+      --dark-footer-text: #eee;
+      --dark-primary: #4ea1ff;
+      --dark-text: #f5f6fa;
+      --dark-nav-hover: #353a42;
+      --dark-overlay: rgba(0,0,0,0.8);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--light-bg);
+      color: var(--light-text);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ===== Dark Mode ===== */
+    body.dark-mode { background: var(--dark-bg); color: var(--dark-text); }
+    body.dark-mode .header { background: var(--dark-header); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    body.dark-mode .logo img { filter: brightness(0) invert(1); }
+    body.dark-mode .nav-link { color: var(--dark-text); }
+    body.dark-mode .nav-link:hover, body.dark-mode .nav-link:focus { background: var(--dark-nav-hover); }
+    body.dark-mode .dropdown { background: var(--dark-header); box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+    body.dark-mode .dropdown a { color: var(--dark-text); }
+    body.dark-mode .dropdown a:hover { background: var(--dark-nav-hover); }
+    body.dark-mode .section:nth-child(even) { background: var(--dark-bg-alt); }
+    body.dark-mode .section:nth-child(odd)  { background: var(--dark-bg); }
+    body.dark-mode .footer { background: var(--dark-footer); color: var(--dark-footer-text); }
+    body.dark-mode .hero { color: #fff; }
+    body.dark-mode .hero::after { background: rgba(0, 87, 184, 0.55); }
+    body.dark-mode .hero-cta { background: var(--dark-primary); color: #fff; }
+    body.dark-mode .hero-cta:hover { background: #fff; color: var(--dark-primary); }
+    body.dark-mode .mobile-menu { background: rgba(30, 34, 40, 0.98); }
+    body.dark-mode .mobile-menu .nav-link { color: #fff; }
+    body.dark-mode .mobile-menu .dropdown a { color: #fff; }
+    body.dark-mode .mobile-menu .dropdown a:hover { background: var(--dark-nav-hover); }
+    body.dark-mode .overlay { background: var(--dark-overlay); }
+    body.dark-mode .hamburger span { background: var(--dark-primary); }
+    body.dark-mode .theme-toggle { color: var(--dark-primary); }
+
+    /* ===== Header ===== */
+    .header {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      background: var(--light-header);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 56px;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: background 0.3s;
+    }
+    .logo {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .logo img {
+      max-height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    .header-right-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Light/Dark Toggle – fixed so the full glyph shows */
+    .theme-toggle {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.2em;
+      cursor: pointer;
+      color: var(--light-primary);
+      transition: color 0.3s;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    /* ===== Hamburger ===== */
+    .hamburger {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 36px;
+      height: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 100;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .hamburger span {
+      display: block;
+      height: 3px;
+      width: 100%;
+      background: var(--light-primary);
+      margin: 2px 0;
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+
+    /* ===== Navigation (Mobile First) ===== */
+    .nav {
+      display: none;
+      align-items: center;
+      z-index: 100;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--light-overlay);
+      z-index: 1100;
+      transition: background 0.3s;
+    }
+    .overlay.active { display: block; }
+    .mobile-menu {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 80vw;
+      max-width: 340px;
+      height: 100vh;
+      background: #fff;
+      z-index: 1101;
+      padding: 32px 0 0 0;
+      box-shadow: -2px 0 16px rgba(0,0,0,0.12);
+      transform: translateX(100%);
+      transition: transform 0.3s;
+      overflow-y: auto;
+    }
+    .mobile-menu.active { transform: translateX(0); }
+    .mobile-menu ul { list-style: none; padding: 0; margin: 0; }
+    .mobile-menu .nav-item { border-bottom: 1px solid #eee; position: relative; }
+    .mobile-menu .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      color: #222;
+      text-decoration: none;
+      font-size: 1.1em;
+      font-weight: 500;
+      background: none;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .mobile-menu .nav-link:hover,
+    .mobile-menu .nav-link:focus { background: var(--light-nav-hover); }
+    .mobile-menu .arrow {
+      margin-left: 8px;
+      font-size: 1em;
+      transition: transform 0.2s;
+    }
+    .mobile-menu .dropdown {
+      display: none;
+      flex-direction: column;
+      background: none;
+      box-shadow: none;
+      position: static;
+      padding: 0 0 0 24px;
+    }
+    .mobile-menu .dropdown a {
+      padding: 12px 0;
+      color: #222;
+      text-decoration: none;
+      font-size: 1em;
+      transition: background 0.2s;
+      display: block;
+    }
+    .mobile-menu .dropdown a:hover { background: var(--light-nav-hover); }
+    .mobile-menu .nav-item.open > .dropdown { display: flex; }
+    .mobile-menu .nav-item.open > .nav-link .arrow { transform: rotate(180deg); }
+
+    /* ===== Hero Section ===== */
+    .hero {
+      width: 100%;
+      height: 260px;
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80') center/cover no-repeat;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #fff;
+      position: relative;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 87, 184, 0.45);
+      z-index: 1;
+    }
+    .hero-content { position: relative; z-index: 2; }
+    .hero-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    .hero-cta {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 12px 28px;
+      background: #fff;
+      color: var(--light-primary);
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background 0.2s, color 0.2s;
+    }
+    .hero-cta:hover { background: var(--light-primary); color: #fff; }
+
+    /* ===== Sections ===== */
+    .section {
+      width: 100%;
+      padding: 36px 0;
+      text-align: center;
+    }
+    .section:nth-child(even) { background: var(--light-bg-alt); }
+    .section:nth-child(odd)  { background: var(--light-bg); }
+    .section-title {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .section-content {
+      max-width: 90vw;
+      margin: 0 auto;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    /* ===== Footer ===== */
+    .footer {
+      background: var(--light-footer);
+      color: var(--light-footer-text);
+      text-align: center;
+      padding: 24px 0 16px 0;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ====== Desktop Styles ====== */
+    @media (min-width: 700px) {
+      .header { height: 72px; padding: 0 40px; }
+      .logo img { max-height: 40px; }
+      .theme-toggle { font-size: 1.7em; }
+      .hamburger { display: none; }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 0;
+      }
+      .nav ul {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .nav-item { position: relative; }
+      .nav-link {
+        text-decoration: none;
+        color: var(--light-text);
+        font-weight: 500;
+        padding: 12px 16px;
+        border-radius: 4px;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1em;
+        line-height: 1.2;
+      }
+      .nav-link:hover, .nav-link:focus { background: var(--light-nav-hover); }
+      .arrow {
+        margin-left: 6px;
+        font-size: 0.8em;
+        transition: transform 0.2s;
+      }
+      .dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: #fff;
+        min-width: 180px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        border-radius: 6px;
+        z-index: 1001;
+        padding: 8px 0;
+        flex-direction: column;
+      }
+      .dropdown a {
+        display: block;
+        padding: 10px 20px;
+        color: #222;
+        text-decoration: none;
+        font-size: 1em;
+        transition: background 0.2s;
+      }
+      .dropdown a:hover { background: var(--light-nav-hover); }
+
+      /* only hover — no more focus-within stickiness */
+      .nav-item:hover .dropdown {
+        display: flex;
+      }
+      .nav-item:hover .arrow {
+        transform: rotate(180deg);
+      }
+
+      .mobile-menu, .overlay { display: none !important; }
+      .hero { height: 420px; }
+      .hero-title { font-size: 2.8rem; }
+      .section { padding: 64px 0; }
+      .section-title { font-size: 2rem; }
+      .section-content { max-width: 700px; font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo_TV_2015.png" alt="Corporate Logo">
+    </div>
+
+    <div class="header-right-controls">
+      <!-- Desktop Nav -->
+      <nav class="nav" aria-label="Main navigation">
+        <ul>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Home</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">About</a>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+              Services
+              <span class="arrow">&#9662;</span>
+            </button>
+            <div class="dropdown" role="menu">
+              <a href="#">Consulting</a>
+              <a href="#">Implementation</a>
+              <a href="#">Support</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+              Solutions
+              <span class="arrow">&#9662;</span>
+            </button>
+            <div class="dropdown" role="menu">
+              <a href="#">Cloud</a>
+              <a href="#">On-Premise</a>
+              <a href="#">Hybrid</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+              Resources
+              <span class="arrow">&#9662;</span>
+            </button>
+            <div class="dropdown" role="menu">
+              <a href="#">Blog</a>
+              <a href="#">Case Studies</a>
+              <a href="#">Webinars</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Contact</a>
+          </li>
+        </ul>
+      </nav>
+      <!-- Hamburger for Mobile -->
+      <button class="hamburger" aria-label="Open menu" aria-controls="mobile-menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <!-- Light/Dark Toggle -->
+      <button class="theme-toggle" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+        &#9790;
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="overlay"></div>
+  <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile navigation">
+    <ul>
+      <li class="nav-item">
+        <a href="#" class="nav-link">Home</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link">About</a>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+          Services
+          <span class="arrow">&#9662;</span>
+        </button>
+        <div class="dropdown" role="menu">
+          <a href="#">Consulting</a>
+          <a href="#">Implementation</a>
+          <a href="#">Support</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+          Solutions
+          <span class="arrow">&#9662;</span>
+        </button>
+        <div class="dropdown" role="menu">
+          <a href="#">Cloud</a>
+          <a href="#">On-Premise</a>
+          <a href="#">Hybrid</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" aria-haspopup="true" aria-expanded="false">
+          Resources
+          <span class="arrow">&#9662;</span>
+        </button>
+        <div class="dropdown" role="menu">
+          <a href="#">Blog</a>
+          <a href="#">Case Studies</a>
+          <a href="#">Webinars</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link">Contact</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-title">Empowering Your Business for the Future</div>
+      <div class="hero-subtitle">Innovative solutions tailored for your success.</div>
+      <a href="#contact" class="hero-cta">Get Started</a>
+    </div>
+  </section>
+
+  <!-- Main Sections -->
+  <section class="section">
+    <div class="section-title">Our Mission</div>
+    <div class="section-content">
+      We strive to deliver world-class solutions that drive growth, efficiency, and innovation for our clients across the globe.
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-title">What We Offer</div>
+    <div class="section-content">
+      From strategic consulting to cutting-edge technology implementation, our services are designed to meet the unique needs of every business.
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-title">Why Choose Us</div>
+    <div class="section-content">
+      Our team of experts brings decades of experience, a passion for excellence, and a commitment to your success.
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-title">Client Success Stories</div>
+    <div class="section-content">
+      Discover how we've helped organizations like yours achieve their goals and transform their operations.
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-title">Latest Insights</div>
+    <div class="section-content">
+      Stay ahead with our latest articles, case studies, and industry insights.
+    </div>
+  </section>
+  <section class="section" id="contact">
+    <div class="section-title">Contact Us</div>
+    <div class="section-content">
+      Ready to take the next step? Reach out to our team today and let's build the future together.
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    &copy; 2024 Corporate Inc. | 123 Business Avenue, City, Country | info@corporate.com | +1 (555) 123-4567
+  </footer>
+
+  <script>
+    // Hamburger menu toggle
+    const hamburger = document.querySelector('.hamburger');
+    const mobileMenu = document.querySelector('.mobile-menu');
+    const overlay = document.querySelector('.overlay');
+    const body = document.body;
+
+    function closeMobileMenu() {
+      mobileMenu.classList.remove('active');
+      overlay.classList.remove('active');
+      hamburger.setAttribute('aria-expanded', 'false');
+      body.style.overflow = '';
+    }
+
+    hamburger.addEventListener('click', function() {
+      const isOpen = mobileMenu.classList.toggle('active');
+      overlay.classList.toggle('active', isOpen);
+      hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      body.style.overflow = isOpen ? 'hidden' : '';
+    });
+
+    overlay.addEventListener('click', closeMobileMenu);
+
+    // Mobile submenu toggle
+    document.querySelectorAll('.mobile-menu .nav-item > button.nav-link').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const parent = btn.parentElement;
+        const isOpen = parent.classList.toggle('open');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        // Close other open submenus
+        document.querySelectorAll('.mobile-menu .nav-item').forEach(item => {
+          if (item !== parent) {
+            item.classList.remove('open');
+            const otherBtn = item.querySelector('button.nav-link');
+            if (otherBtn) {
+              otherBtn.setAttribute('aria-expanded', 'false');
+            }
+          }
+        });
+      });
+    });
+
+    // Close mobile menu on resize to desktop
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= 700) {
+        closeMobileMenu();
+        document.querySelectorAll('.mobile-menu .nav-item.open').forEach(item => {
+          item.classList.remove('open');
+          const btn = item.querySelector('button.nav-link');
+          if (btn) {
+            btn.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+    });
+
+    // Light/Dark mode toggle
+    const themeToggle = document.querySelector('.theme-toggle');
+    function setTheme(dark) {
+      if (dark) {
+        body.classList.add('dark-mode');
+        themeToggle.innerHTML = '&#9788;';
+      } else {
+        body.classList.remove('dark-mode');
+        themeToggle.innerHTML = '&#9790;';
+      }
+      localStorage.setItem('theme', dark ? 'dark' : 'light');
+    }
+
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      if (savedTheme === 'dark') {
+        setTheme(true);
+      } else if (savedTheme === 'light') {
+        setTheme(false);
+      } else {
+        setTheme(prefersDark);
+      }
+    })();
+
+    themeToggle.addEventListener('click', function() {
+      setTheme(!body.classList.contains('dark-mode'));
+    });
+
+    // Accessibility: close mobile menu with ESC
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+        closeMobileMenu();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Corporate Page</title>
+    <style>
+      /* Reset some defaults */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #000;
+      }
+
+      /* Sticky header */
+      header {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1rem;
+        height: 60px;
+        border-bottom: 1px solid #ddd;
+        z-index: 1000;
+      }
+      .logo img {
+        height: 40px;
+      }
+
+      /* Navigation */
+      nav ul {
+        list-style: none;
+        display: flex;
+        gap: 1rem;
+      }
+      nav li {
+        position: relative;
+      }
+      nav a {
+        text-decoration: none;
+        color: #000;
+        padding: 0.5rem;
+        display: inline-block;
+      }
+      /* Arrow indicator for items with submenu */
+      nav li.has-submenu > a::after {
+        content: "▼";
+        font-size: 0.6em;
+        margin-left: 0.25em;
+      }
+      /* Submenu */
+      nav ul.submenu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #fff;
+        border: 1px solid #ddd;
+        min-width: 150px;
+      }
+      nav ul.submenu li {
+        width: 100%;
+      }
+      nav li.has-submenu:hover > ul.submenu {
+        display: block;
+      }
+
+      /* Hero section */
+      .hero {
+        height: 400px;
+        background: url("https://via.placeholder.com/1200x400") center/cover
+          no-repeat;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: #fff;
+      }
+      .hero .cta {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 1rem 2rem;
+        border-radius: 4px;
+        font-size: 1.5rem;
+        text-decoration: none;
+        color: #fff;
+      }
+
+      /* Content sections */
+      .content {
+        padding: 4rem 1rem;
+      }
+      .light {
+        background: #f7f7f7;
+      }
+      .dark {
+        background: #eaeaea;
+      }
+
+      /* Footer */
+      footer {
+        background: #333;
+        color: #fff;
+        padding: 2rem 1rem;
+        text-align: center;
+      }
+      footer p {
+        margin-bottom: 0.5rem;
+      }
+      footer a {
+        color: #fff;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <!-- Replace with your actual logo -->
+        <img
+          src="https://via.placeholder.com/150x40?text=Logo"
+          alt="Corporate Logo"
+        />
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li class="has-submenu">
+            <a href="#">About Us</a>
+            <ul class="submenu">
+              <li><a href="#">Our Mission</a></li>
+              <li><a href="#">Team</a></li>
+            </ul>
+          </li>
+          <li class="has-submenu">
+            <a href="#">Services</a>
+            <ul class="submenu">
+              <li><a href="#">Consulting</a></li>
+              <li><a href="#">Implementation</a></li>
+            </ul>
+          </li>
+          <li><a href="#">Products</a></li>
+          <li class="has-submenu">
+            <a href="#">Resources</a>
+            <ul class="submenu">
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Webinars</a></li>
+            </ul>
+          </li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <a href="#signup" class="cta">Get Started Today</a>
+    </section>
+
+    <section class="content light">
+      <h2>Section 1</h2>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec
+        odio.
+      </p>
+    </section>
+
+    <section class="content dark">
+      <h2>Section 2</h2>
+      <p>Praesent libero. Sed cursus ante dapibus diam. Sed nisi.</p>
+    </section>
+
+    <section class="content light">
+      <h2>Section 3</h2>
+      <p>Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum.</p>
+    </section>
+
+    <section class="content dark">
+      <h2>Section 4</h2>
+      <p>Praesent mauris. Fusce nec tellus sed augue semper porta.</p>
+    </section>
+
+    <footer>
+      <p>&copy; 2025 Your Company Name</p>
+      <p>123 Business Rd, Suite 456, City, Country</p>
+      <p>
+        <a href="mailto:info@yourcompany.com">info@yourcompany.com</a> | +1
+        (555) 123-4567
+      </p>
+    </footer>
+  </body>
+</html>

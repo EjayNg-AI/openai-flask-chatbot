@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WhatsApp Button</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0; /* Remove default body margin */
+        height: 200vh; /* Just to enable scrolling and see the fixed button */
+      }
+
+      .whatsapp-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: transparent;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: transform 0.2s ease-in-out;
+        z-index: 1000; /* Ensure it's above other content */
+
+        /* Mobile-first icon size */
+        width: 60px;
+        height: 60px;
+      }
+
+      .whatsapp-button img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* Ensures the logo fits well */
+      }
+
+      /* Mobile hover/click effect */
+      .whatsapp-button:hover,
+      .whatsapp-button:active {
+        transform: scale(1.1); /* Slightly expand on hover and click */
+      }
+
+      /* Desktop-specific styles */
+      @media (min-width: 768px) {
+        /* Adjust breakpoint as needed */
+        .whatsapp-button {
+          width: 80px; /* Larger icon for desktop */
+          height: 80px; /* Larger icon for desktop */
+        }
+
+        .whatsapp-button:hover,
+        .whatsapp-button:active {
+          transform: scale(1.15); /* Slightly larger expansion for desktop */
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .whatsapp-button:hover {
+        animation: pulse 1s infinite; /* Apply a continuous pulse on hover */
+        /* Or, enhance the existing scale effect */
+        transform: scale(1.2); /* Make it bigger than the non-hover pulse */
+      }
+    </style>
+  </head>
+  <body>
+    <p>Scroll down to see the WhatsApp button stay fixed.</p>
+
+    <a id="whatsappBtn" class="whatsapp-button" target="_blank">
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/2044px-WhatsApp.svg.png"
+        alt="WhatsApp"
+      />
+    </a>
+
+    <script>
+      const whatsappButton = document.getElementById("whatsappBtn");
+
+      // The JavaScript to open WhatsApp Web can remain as is,
+      // as it's not directly related to the visual display changes.
+      // However, for a more robust solution, you might want to direct
+      // mobile users to the WhatsApp app URI scheme if possible,
+      // and desktop users to WhatsApp Web. This is a more complex
+      // enhancement beyond the current scope.
+
+      whatsappButton.addEventListener("click", function (event) {
+        // Prevent default link behavior if needed, though target="_blank" handles new tab
+        // event.preventDefault(); // Uncomment if you have other click actions to manage
+
+        // Open WhatsApp Web in a new tab
+        window.open("https://web.whatsapp.com/", "_blank");
+      });
+    </script>
+  </body>
+</html>
