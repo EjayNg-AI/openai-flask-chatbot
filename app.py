@@ -435,6 +435,53 @@ def save_conversation():
 
 
 
+@app.route("/autosave", methods=["POST"])
+def autosave_conversation() -> Response:
+    """
+    Persists (a) the full conversation history as JSON and
+    (b) the current markdown buffer as .md inside ./conversations/.
+
+    Expected request body:
+        {
+            "uniqueId": "<uuid that identifies the chat>",
+            "markdown": "<contents of the editor panel>"
+        }
+    """
+    global message_accumulate
+
+    data       = request.get_json(silent=True) or {}
+    unique_id  = data.get("uniqueId")
+    md_text    = data.get("markdown")
+
+    if not unique_id or md_text is None:
+        return jsonify({"error": "uniqueId and markdown are required"}), 400
+
+    # Build the latest conversation slice
+    counter   = determine_counter(unique_id)
+    messages  = get_conversation_history(unique_id, counter)
+
+    # Output files inside ./conversations/
+    json_path = os.path.join(CONVERSATIONS_DIR, f"{unique_id}messages.json")
+    md_path   = os.path.join(CONVERSATIONS_DIR, f"{unique_id}.md")
+
+    try:
+        with open(json_path, "w", encoding="utf-8") as fh:
+            json.dump(messages, fh, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        logger.error("Auto-save JSON failed: %s", exc, exc_info=True)
+        return jsonify({"error": "Failed to save json"}), 500
+
+    try:
+        with open(md_path, "w", encoding="utf-8") as fh:
+            fh.write(md_text)
+    except Exception as exc:
+        logger.error("Auto-save markdown failed: %s", exc, exc_info=True)
+        return jsonify({"error": "Failed to save markdown"}), 500
+
+    return jsonify({"message": "auto-saved"}), 200
+
+
+
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     global message_accumulate

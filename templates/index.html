@@ -781,6 +781,24 @@ For each **source code file**, provide the following metadata:
         }
       }
 
+      /* -------------------------------------------------------------
+       *  Send the current editor buffer + uniqueId to /autosave
+       * ----------------------------------------------------------- */
+      async function autoSaveConversation() {
+        try {
+          await fetch("/autosave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              markdown: markdownInput.value,
+            }),
+          });
+        } catch (err) {
+          console.warn("auto-save failed", err);
+        }
+      }
+
       // Attach the sanitizeLeftPanel function to the new button's click event.
       document
         .getElementById("sanitize-btn")
@@ -1251,6 +1269,7 @@ For each **source code file**, provide the following metadata:
               renderMarkdown(true);
               isMathRendered = true;
             }
+            await autoSaveConversation();
             submitBtn.disabled = false;
           } catch (error) {
             console.error("Streaming error:", error);
@@ -1281,6 +1300,7 @@ For each **source code file**, provide the following metadata:
               renderMarkdown(true);
               isMathRendered = true;
             }
+            await autoSaveConversation();
             submitBtn.disabled = false;
           } catch (error) {
             console.error("Non-streaming error:", error);
