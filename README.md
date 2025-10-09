@@ -1,6 +1,6 @@
 # Multi-Model AI Chatbot with Streaming, File Viewer, and Conversation Management
 
-A powerful, extensible web-based chatbot supporting multiple Large Language Models (LLMs) including OpenAI (GPT-4.1, GPT-4o, o3-mini-high), Anthropic (Claude), and Google (Gemini). Features real-time streaming, advanced conversation management, Markdown/code/math rendering, and a unique file viewer for loading local project files directly into the chat context.
+A powerful, extensible web-based chatbot supporting multiple Large Language Models (LLMs) including OpenAI (chatgpt-4o-latest, GPT-4o, GPT-4.1, o4-mini, o3, o1-pro), Anthropic (Claude), and Google (Gemini). Features real-time streaming, advanced conversation management, Markdown/code/math rendering, and a unique file viewer for loading local project files directly into the chat context.
 
 ---
 
@@ -8,9 +8,9 @@ A powerful, extensible web-based chatbot supporting multiple Large Language Mode
 
 - **Multi-Model Support**  
   Seamlessly switch between:
-  - **OpenAI**: `chatgpt-4o-latest`, `gpt-4o`, `gpt-4.1`, `o1-pro`, `o1`, `o3-mini`
+  - **OpenAI**: `chatgpt-4o-latest`, `gpt-4o`, `gpt-4.1`, `o4-mini`, `o3`, `o1-pro`
   - **Anthropic**: `claude-3-7-sonnet-20250219`
-  - **Google**: `gemini-2.0-flash-thinking-exp-01-21`, `gemini-2.5-pro-exp-03-25`
+  - **Google**: `gemini-2.5-flash-preview-04-17`, `gemini-2.5-pro-preview-05-06`
 
 - **Real-Time Streaming**  
   Receive responses token-by-token for most models, for a fast, interactive experience.
