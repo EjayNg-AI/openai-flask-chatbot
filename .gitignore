@@ -1,6 +1,8 @@
 # Environment variables
 # VERY IMPORANT: This must never be exposed online
 .env
+.env.local
+.env.*.local
 
 # Python
 __pycache__/
@@ -11,6 +13,7 @@ __pycache__/
 *.log
 
 # Virtual Environment
+.venv/
 venv/
 ENV/
 env/
@@ -23,3 +26,28 @@ flask_session/
 
 # Conversations
 conversations/
+
+# Zone Identifiers
+*.zoneinfo
+*.tzinfo
+*.pid
+*.seed
+*.backup
+*.bak
+*.swp
+*.swo
+*.tmp
+*.old
+*.orig
+*.rej
+*.log
+*.out
+*.err
+*.aux
+*.toc
+*.gz
+*.zip
+*.tar
+*.rar
+*.7z
+*Zone.Identifier*
