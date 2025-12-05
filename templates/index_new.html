@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot powered by State of the Art LLMs</title>
+
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
+        },
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
+        },
+      };
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .control-panel {
+        display: flex;
+        gap: 10px;
+        padding: 20px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .query-input {
+        font-size: 16px;
+        flex: 1;
+        resize: none;
+        line-height: 1.2;
+        min-height: 10px;
+        max-height: 70vh;
+        overflow-y: auto;
+        transition: height 0.2s ease;
+        padding: 2.3px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 80px;
+        /* Fixed width */
+        height: 60px;
+        /* Fixed height */
+        flex-shrink: 0;
+        /* Prevent buttons from shrinking */
+      }
+
+      .toggle-dark-mode {
+        background-color: #008080;
+        color: white;
+      }
+
+      .toggle-dark-mode:hover {
+        background-color: #005f5f;
+      }
+
+      .sanitize-btn {
+        background-color: #0066cc;
+        color: white;
+      }
+
+      .sanitize-btn:hover {
+        background-color: #004999;
+      }
+
+      .copy-prompt-btn:hover {
+        background-color: #ff9800;
+        color: white;
+      }
+
+      .copy-prompt-btn {
+        background-color: #f57c00;
+        color: white;
+      }
+
+      .load-btn {
+        background-color: #aa4444;
+        color: white;
+      }
+
+      .load-btn:hover {
+        background-color: #dd7777;
+        color: white;
+      }
+
+      .save-btn {
+        background-color: #444444;
+        color: white;
+      }
+
+      .save-btn:hover {
+        background-color: #777777;
+        color: white;
+      }
+
+      .submit-btn {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .submit-btn:hover {
+        background-color: #45df49;
+        color: white;
+      }
+
+      .clearscreen-btn {
+        background-color: #550055;
+        color: white;
+      }
+
+      .clearscreen-btn:hover {
+        background-color: #990099;
+        color: white;
+      }
+
+      .close-btn {
+        background-color: #0000aa;
+        color: white;
+      }
+
+      .close-btn:hover {
+        background-color: #0055ff;
+        color: white;
+      }
+
+      .file-viewer-btn {
+        background-color: #aa0044;
+        color: white;
+      }
+
+      .file-viewer-btn:hover {
+        background-color: #cc0066;
+        color: white;
+      }
+
+      .consolidate-btn {
+        background-color: #444444;
+        color: white;
+      }
+
+      .consolidate-btn:hover {
+        background-color: #777777;
+        color: white;
+      }
+
+      .reset-btn {
+        background-color: #f44336;
+        color: white;
+      }
+
+      .reset-btn:hover {
+        background-color: #ff0099;
+        color: white;
+      }
+
+      .conversation-turn {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .query-container {
+        padding: 20px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .editor,
+      .preview {
+        width: 50%;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow: auto;
+        min-width: 0;
+      }
+
+      .editor {
+        border-right: 1px solid #ddd;
+        background-color: #f9f9f9;
+      }
+
+      #markdown-input {
+        width: 100%;
+        height: 100%;
+        resize: none;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        font-family: "Courier New", Courier, monospace;
+      }
+
+      .preview {
+        background-color: #fff;
+      }
+
+      pre {
+        position: relative;
+        background-color: #f0f0f0;
+        padding: 15px;
+        overflow: auto;
+        border-radius: 5px;
+      }
+
+      pre button.copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+
+      blockquote {
+        border-left: 5px solid #ccc;
+        padding-left: 15px;
+        color: #666;
+        margin: 1em 0;
+      }
+
+      .model-controls {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px;
+        background-color: #ffffff;
+        border-bottom: 1px solid #000000;
+      }
+
+      .model-controls .drop-down-menu {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      /* ─── Light‑mode fixes for the left "file‑browser" panel ─── */
+      body:not(.dark-mode) #file-browser {
+        background-color: #fafafa;
+        color: #111;
+      }
+
+      body:not(.dark-mode) #directory-tree .directory-entry,
+      body:not(.dark-mode) #directory-tree .toggle-triangle {
+        color: #222;
+      }
+
+      body:not(.dark-mode) #directory-tree a.file-link {
+        color: #007bff;
+      }
+
+      body:not(.dark-mode) #directory-tree a.file-link:hover {
+        color: #0056b3;
+      }
+
+      #markdown-input {
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      #chat-panel,
+      .container,
+      .editor,
+      .preview {
+        min-width: 0;
+      }
+
+      .preview pre {
+        overflow-x: auto;
+      }
+
+      /* normal light‑mode links */
+      #preview a {
+        color: #007bff; /* "normal" blue */
+        text-decoration: underline;
+      }
+      #preview a:hover {
+        color: #ff0000; /* normal red hover */
+      }
+
+      /* ---------------- Dark Mode Styles ---------------- */
+      /* When the body receives the "dark-mode" class the following rules apply */
+      body.dark-mode {
+        background-color: #121212;
+        color: white;
+        /* General text color */
+      }
+
+      /* Override background and text for control panels & header areas */
+      body.dark-mode .control-panel,
+      body.dark-mode .model-controls {
+        background-color: #181818;
+        color: white;
+      }
+
+      /* Editor and preview areas use near‑black backgrounds with white text */
+      body.dark-mode .editor,
+      body.dark-mode .preview,
+      body.dark-mode textarea {
+        background-color: #121212;
+        color: white;
+      }
+
+      /* Code blocks use a different dark background for contrast */
+      body.dark-mode pre {
+        background-color: #2e2e2e;
+        color: white;
+      }
+
+      /* dark‑mode overrides */
+      body.dark-mode #preview a {
+        color: #00ff00; /* bright green */
+      }
+      body.dark-mode #preview a:hover {
+        color: #ff0000; /* bright red hover */
+      }
+
+      /* ---------------- End Dark Mode Styles ---------------- */
+
+      /* ———— new two‐pane layout ———— */
+      #content-wrapper {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      #file-browser {
+        flex: 0 0 240px;
+        height: 100%;
+        min-width: 120px;
+        border-right: 1px solid #ccc;
+        padding: 8px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
+
+      #file-browser button {
+        margin: 3px 0;
+        width: 100%;
+        padding: 6px 8px;
+        font-size: 0.85em;
+      }
+
+      #directory-tree .node {
+        margin-left: 20px;
+      }
+
+      #directory-tree .toggle-triangle {
+        display: inline-block;
+        width: 1em;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        margin-right: 5px;
+      }
+
+      #directory-tree .directory-entry {
+        font-weight: bold;
+      }
+
+      #directory-tree a.file-link {
+        display: block;
+        color: #00cc00;
+        text-decoration: none;
+        margin: 2px 0;
+      }
+
+      #directory-tree a.file-link:hover {
+        text-decoration: underline;
+        color: #00ff00;
+      }
+
+      /* pull your old .container into the right pane */
+      #chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- … your model‐controls & control‐panel … -->
+
+    <div id="content-wrapper">
+      <!-- LEFT: file‐browser -->
+      <div id="file-browser">
+        <button id="open-folder">Open Directory</button>
+        <button id="refresh">Refresh</button>
+        <div id="directory-tree"></div>
+      </div>
+
+      <!-- RIGHT: your existing chat UI -->
+      <div id="chat-panel">
+        <div class="model-controls">
+          <div class="drop-down-menu">
+            <form>
+              <label for="language-model">Select Language Model:</label>
+              <select id="language-model">
+                <option value="o3">o3</option>
+                <option value="o1-pro">o1-pro</option>
+              </select>
+            </form>
+            <button id="model_choice">Select Model</button>
+          </div>
+          <div>
+            <label style="margin-left: 10px">
+              <input type="checkbox" id="math-render" />
+              Escape Output & Render Math
+            </label>
+          </div>
+          <div>
+            <button id="file-viewer-btn" class="file-viewer-btn">
+              File Viewer
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px">
+            <button id="consolidate-btn" class="consolidate-btn">
+              Consolidate
+            </button>
+            <select id="consolidate-option">
+              <option value="fully_updated">Fully Updated Files</option>
+              <option value="refactor">Refactor Code</option>
+              <option value="critique">Critique Code</option>
+              <option value="synopsis">Synopsis of Project</option>
+            </select>
+          </div>
+          <div>
+            <button id="sanitize-btn" class="sanitize-btn">
+              Sanitize Scripts
+            </button>
+          </div>
+          <div>
+            <button id="toggle-dark-mode" class="toggle-dark-mode">
+              Toggle Dark Mode
+            </button>
+          </div>
+        </div>
+
+        <div class="control-panel">
+          <textarea
+            type="text"
+            id="query-input"
+            class="query-input"
+            placeholder="Enter your question..."
+          ></textarea>
+          <button id="copy-prompt-btn" class="button copy-prompt-btn">
+            Copy Prompt
+          </button>
+          <button id="submit-btn" class="button submit-btn">Submit</button>
+          <button id="clearscreen-btn" class="button clearscreen-btn">
+            Clear Screen
+          </button>
+          <button id="load-btn" class="button load-btn">Load</button>
+          <button id="save-btn" class="button save-btn">Save</button>
+          <button id="reset-btn" class="button reset-btn">Reset</button>
+          <button id="shutdown-btn" class="button close-btn">Close</button>
+        </div>
+        <div class="container">
+          <div class="editor">
+            <textarea id="markdown-input"></textarea>
+          </div>
+          <div class="preview" id="preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      hljs.highlightAll();
+
+      const dropdown_menu = document.getElementById("language-model");
+      const queryInput = document.getElementById("query-input");
+      const copyPromptBtn = document.getElementById("copy-prompt-btn");
+      const submitBtn = document.getElementById("submit-btn");
+      const clear_scr = document.getElementById("clearscreen-btn");
+      const loadBtn = document.getElementById("load-btn");
+      const SaveBtn = document.getElementById("save-btn");
+      const closeBtn = document.getElementById("shutdown-btn");
+      const resetBtn = document.getElementById("reset-btn");
+      const markdownInput = document.getElementById("markdown-input");
+      const preview = document.getElementById("preview");
+      const choose_model = document.getElementById("model_choice");
+      const MathRender = document.getElementById("math-render");
+
+      submitBtn.disabled = true;
+      SaveBtn.disabled = true;
+      choose_model.disabled = true;
+      clear_scr.disabled = true;
+
+      let uniqueId;
+      let model_name;
+      let streaming_flag = false;
+      let math_render_flag = false;
+      let consolidate_flag = false;
+      let currentFileContents = "";
+      let consolidate_option = "fully_updated";
+      let prompt_consolidate =
+        "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
+
+      let refactoringPrompt = `Objective: Refactor and clean up the existing codebase to improve its readability, maintainability, and modularity **without altering any existing functionality or user experience**.
+
+Strict Constraints:
+1. Do not introduce any changes in logic, business rules, or user-facing behavior.
+2. Preserve exact input/output behavior, side-effects, UI layout/flow, and performance characteristics (within a negligible margin).
+3. Do not remove or simplify code that appears redundant unless it has *zero* effect on behavior and is *provably unreachable or unnecessary*.
+
+Goals of Refactoring:
+- Improve structure, clarity, and cohesion of the codebase.
+- Reduce deeply nested logic, excessive coupling, and repetition.
+- Apply standard best practices (e.g., DRY, SRP, consistent naming, modularization).
+- Introduce helper functions, configuration files, or abstractions only if they increase clarity.
+- Document public interfaces, key functions, and assumptions where lacking.
+
+Code Coverage & Testing:
+- All changes must be accompanied by unit or integration tests where possible.
+- Validate that test results remain unchanged post-refactor. If no test suite exists, assist in generating regression tests from current behavior.
+
+Deliverables:
+- Refactored code with in-line comments on major changes or restructuring decisions.
+- A summary of the changes, including files touched, functions moved/extracted, patterns replaced, and any identified anti-patterns.
+- (Optional) A cleanup roadmap for future maintainability and architectural improvements.
+
+Output:
+- Output one refactored file at a time, including the original file name and a summary of changes, recommendations and other notes.
+- Prompt the user to confirm the changes before proceeding to the next file.
+`;
+
+      let synopsisPrompt = `# Provide structured metadata of codebase
+
+**You are a senior software engineer and architect.** You have been provided with multiple source files in your current context. For **each** file, please extract and summarize the following metadata. Then, provide an **overall, high-level summary** of the entire codebase at the end.
+
+---
+
+## I. Codebase-Level Information
+
+1. **Directory Structure**
+   - Provide a tree-style or indented list of file and folder paths relative to the project root.
+
+2. **Programming Languages & Key Technologies**
+   - List the programming languages, frameworks, libraries, and technologies used across the codebase.
+
+3. **Entry Points & Execution Flow**
+   - Identify main entry points.
+   - Briefly describe how control flows through the application from start to finish.
+
+4. **High-Level Architecture Overview**
+   - Summarize the architectural style (e.g., monolithic, microservices, event-driven).
+   - Describe major components or modules and how they interact.
+
+---
+
+## II. File-Level Information (Repeat for Each File)
+
+For each **source code file**, provide the following metadata:
+
+1. **File Path**
+   - The full path (or best estimate if partial paths are given).
+
+2. **File Type/Language**
+   - Explicitly state the language or file type (e.g., Python, JavaScript, CSS, HTML, JSON).
+
+3. **High-Level Summary/Purpose**
+   - A concise (1–3 sentence) natural language description of what the file does or which feature/component it represents.
+
+4. **Key Entities Defined**
+   - A list of major classes, functions, methods, constants, variables, interfaces, or components.
+
+5. **Dependencies (Imports/Requires)**
+   - A list of other modules/files (from **within** this codebase) that this file imports or requires.
+
+6. **Exports/Public Interface**
+   - A list of entities (classes, functions, constants, etc.) that are publicly exposed and can be used by other files.
+
+7. **Docstrings for Python Modules**
+   - For *python modules*, provide docstrings for each class and function therein.
+
+---
+
+## Output Format
+
+- Format your final answer as a **Markdown document** with clear headings and subheadings.
+- First, provide a **"Codebase-Level Information"** section.
+- Then, list all **file-level** metadata (in whichever order the files appear or by directory order).
+- If any of the elements do not apply to a particular file, please omit them or mark them as "N/A."
+- Make sure to keep your headings and structure consistent.
+- Be **concise** but **complete**. Avoid repeating boilerplate. Capture purpose, semantics, and relationships, not just syntax.
+
+---
+
+`;
+
+      /**
+       * sanitizeText scans the given markdown text and escapes any HTML tags
+       * (e.g. <img>, <a>, <p> etc.) that appear outside of code blocks and
+       * that are not already escaped.
+       *
+       * This version recognizes code blocks fenced with either three or four backticks.
+       *
+       * @param {string} text - The markdown text to sanitize.
+       * @returns {string} - The sanitized text.
+       */
+      function sanitizeText(text) {
+        /**
+         * sanitizeInline processes a given text segment (outside fenced code blocks)
+         * and escapes any HTML tags found outside inline code blocks.
+         *
+         * @param {string} segment - A portion of text that might include inline code.
+         * @returns {string} - The segment with HTML tags normalized and escaped.
+         */
+        function sanitizeInline(segment) {
+          // Split the segment by inline code blocks wrapped in single backticks.
+          var inlineParts = segment.split(/(`[^`]*`)/g);
+          for (var i = 0; i < inlineParts.length; i++) {
+            // Process only parts that are not inline code.
+            if (!/^`[^`]*`$/.test(inlineParts[i])) {
+              inlineParts[i] = inlineParts[i].replace(
+                /<\s*(\/?)\s*(["']?)([a-zA-Z][a-zA-Z0-9-]*)(["']?)([^>]*)>/g,
+                function (match, slash, openQuote, tagName, closeQuote, rest) {
+                  var trimmedRest = rest.trim();
+                  var normalizedTag =
+                    "&lt;" +
+                    (slash ? slash : "") +
+                    (openQuote ? openQuote : "") +
+                    tagName +
+                    (closeQuote ? closeQuote : "");
+                  if (trimmedRest === "/") {
+                    normalizedTag += trimmedRest + "&gt;";
+                  } else if (trimmedRest) {
+                    normalizedTag += " " + trimmedRest + "&gt;";
+                  } else {
+                    normalizedTag += "&gt;";
+                  }
+                  return normalizedTag;
+                }
+              );
+            }
+          }
+          return inlineParts.join("");
+        }
+
+        // Updated regex to recognize code blocks with either 3 or 4 backticks.
+        var parts = text.split(/((?:`{3,4})[\s\S]*?(?:`{3,4}))/g);
+        for (var j = 0; j < parts.length; j++) {
+          // Only sanitize parts that are not identified as code blocks.
+          if (!/^(?:`{3,4})/.test(parts[j])) {
+            parts[j] = sanitizeInline(parts[j]);
+          }
+        }
+        return parts.join("");
+      }
+
+      /**
+       * Unescapes HTML entities (&lt; and &gt;) inside fenced code blocks.
+       * This version uses a regex that captures the entire block, ensures that
+       * the fence markers are the same (by using a backreference), and then unescapes
+       * the content between the markers.
+       *
+       * @param {string} text - The input markdown text.
+       * @returns {string} - The text with HTML entities unescaped inside fenced code blocks.
+       */
+      function unescapeHtmlEntitiesInFencedCodeBlocks(text) {
+        // This regex matches a fence (3 or more backticks), followed by any content,
+        // and then the same fence again (the backreference \1 ensures that the closing
+        // fence is exactly the same as the opening fence).
+        const codeBlockRegex = /(^`{3,})([\s\S]*?)(^\1$)/gm;
+
+        return text.replace(
+          codeBlockRegex,
+          (match, fence, codeContent, closingFence) => {
+            // Unescape HTML entities only in the content of the code block.
+            const unescapedContent = codeContent
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">");
+            return fence + unescapedContent + closingFence;
+          }
+        );
+      }
+
+      /*
+  // Example usage:
+  const originalMarkdown = "Normal text <p>with tag</p>\n\n````\n// Some code: &lt;div&gt;should be unescaped&lt;/div&gt;\n// More code: &lt;span&gt;should not be escaped by sanitizeText&lt;/span&gt;\n````\n\nMore text with <a href='#'>link</a>.";
+
+  // First, sanitize tags outside code blocks:
+  const sanitized = sanitizeText(originalMarkdown);
+  const finalText = unescapeHtmlEntitiesInFencedCodeBlocks(sanitized);
+  // finalText is now: "Normal text &lt;p&gt;with tag&lt;/p&gt;\n\n````\n// Some code: &lt;div&gt;should be unescaped&lt;/div&gt;\n// More code: &lt;span&gt;should not be escaped by sanitizeText&lt;/span&gt;\n````\n\nMore text with &lt;a href='#'&gt;link&lt;/a&gt;."
+
+  console.log("Original:\n", originalMarkdown);
+  console.log("\nSanitized:\n", sanitized);
+  console.log("\nFinal Text (Restored inside code):\n", finalText);
+  */
+
+      /**
+       * sanitizeLeftPanel retrieves the current contents of the editor (left panel),
+       * sanitizes it (escaping any tags that are not already inside code blocks),
+       * updates the editor with the sanitized content, and then re-renders the preview.
+       */
+      function sanitizeLeftPanel() {
+        var editor = document.getElementById("markdown-input");
+        if (!editor) {
+          console.error("Editor element (#markdown-input) not found.");
+          return;
+        }
+        var originalText = editor.value;
+        var sanitizedText = sanitizeText(originalText);
+        if (sanitizedText !== originalText) {
+          editor.value = sanitizedText;
+          // Re-render the preview; the renderMarkdown function is defined elsewhere.
+          renderMarkdown(true);
+          alert(
+            "Sanitization complete. Tags outside code blocks have been escaped."
+          );
+        } else {
+          alert("No unsanitized tags found outside code blocks.");
+        }
+      }
+
+      /* -------------------------------------------------------------
+       *  Send the current editor buffer + uniqueId to /autosave
+       * ----------------------------------------------------------- */
+      async function autoSaveConversation() {
+        try {
+          await fetch("/autosave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              markdown: markdownInput.value,
+            }),
+          });
+        } catch (err) {
+          console.warn("auto-save failed", err);
+        }
+      }
+
+      // Attach the sanitizeLeftPanel function to the new button's click event.
+      document
+        .getElementById("sanitize-btn")
+        .addEventListener("click", sanitizeLeftPanel);
+
+      // When the 'Toggle Dark Mode' button is clicked, toggle the "dark-mode" class on the body element
+      document
+        .getElementById("toggle-dark-mode")
+        .addEventListener("click", function () {
+          document.body.classList.toggle("dark-mode");
+        });
+
+      MathRender.addEventListener("change", async () => {
+        math_render_flag = MathRender.checked;
+        // Send to backend
+        try {
+          await fetch("/update-math-render", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              math_render_flag: math_render_flag,
+            }),
+          });
+          if (markdownInput) {
+            markdownInput.value += `\n Math Rendering: ${math_render_flag} \n`;
+          }
+        } catch (err) {
+          console.error("Failed to update backend:", err);
+        }
+      });
+
+      document
+        .getElementById("file-viewer-btn")
+        .addEventListener("click", () => {
+          window.open("/filecontents", "_blank");
+        });
+
+      document.getElementById("load-btn").addEventListener("click", () => {
+        // this will cause the Flask handler to pop up a native file chooser
+        window.open("/load", "_blank");
+      });
+
+      document
+        .getElementById("consolidate-btn")
+        .addEventListener("click", () => {
+          const consolidateOption =
+            document.getElementById("consolidate-option").value;
+
+          if (!uniqueId || !model_name || streaming_flag === undefined) {
+            alert("Missing required data.");
+            return;
+          }
+
+          const params = new URLSearchParams({
+            uniqueId: uniqueId,
+            model_name: model_name,
+            streaming_flag: streaming_flag,
+            option: consolidateOption,
+          });
+
+          const url = `/consolidate?${params.toString()}`;
+          window.open(url, "_blank");
+        });
+
+      function updateFileContents(contents) {
+        currentFileContents = contents;
+        console.log("File contents updated in main window.");
+      }
+
+      // Fetch token from the Flask backend
+      fetch("/get-token")
+        .then((response) => response.json())
+        .then((data) => {
+          // Set the global uniqueId
+          uniqueId = data.token;
+          model_name = data.model_name;
+          streaming_flag = false; // o3 and o1-pro both use non-streaming
+          consolidate_flag = data.consolidate_conversation_flag;
+          consolidate_option = data.consolidate_option;
+          const initialMarkdown = data.markdown_content || "";
+          setTimeout(() => {
+            if (markdownInput) {
+              let sanitizedMarkdown = sanitizeText(initialMarkdown);
+
+              const fence = "````";
+              markdownInput.value =
+                fence + "markdown\n" + sanitizedMarkdown + "\n" + fence;
+
+              markdownInput.scrollTop = markdownInput.scrollHeight;
+              markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
+              markdownInput.value += `\n Model: ${model_name} \n`;
+              markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
+              renderMarkdown(true);
+              submitBtn.disabled = false;
+              SaveBtn.disabled = false;
+              choose_model.disabled = false;
+              clear_scr.disabled = false;
+            }
+          }, 0);
+          if (consolidate_flag) {
+            if (consolidate_option === "fully_updated") {
+              queryInput.value =
+                "In this conversation, I initially provided project code files. Based on all the feedback, suggestions, and revisions discussed so far, please output the full, updated set of project files, organized and ready to copy into my development environment. Reflect all code, structural, and dependency updates. Ensure that the final output is fully integrated, consistent, and ready for use.";
+            } else if (consolidate_option === "refactor") {
+              queryInput.value = refactoringPrompt;
+            } else if (consolidate_option === "critique") {
+              queryInput.value =
+                "Examine the attached project code files and provide a detailed critique of the code, including suggestions for improvements, potential issues, and best practices. Focus on code quality, readability, and maintainability.";
+            } else if (consolidate_option === "synopsis") {
+              queryInput.value = synopsisPrompt;
+            }
+
+            consolidate_flag = false;
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching token:", error);
+        });
+
+      copyPromptBtn.addEventListener("click", async () => {
+        const currentQuery = queryInput.value;
+
+        // Fetch the latest file contents from the backend
+        let fileContents = "";
+        try {
+          const response = await fetch("/get_file_contents");
+          if (response.ok) {
+            const data = await response.json();
+            fileContents = data.file_contents || "";
+          } else {
+            console.warn("Failed to fetch file contents from backend.");
+          }
+        } catch (err) {
+          console.error("Error fetching file contents from backend:", err);
+        }
+
+        const fullPrompt = fileContents
+          ? currentQuery + " \n  \n " + fileContents
+          : currentQuery;
+
+        if (fullPrompt.trim() === "") {
+          alert("Nothing to copy (input and file contents are empty).");
+          return;
+        }
+
+        navigator.clipboard
+          .writeText(fullPrompt)
+          .then(() => {
+            const originalText = copyPromptBtn.innerText;
+            copyPromptBtn.innerText = "Copied!";
+            copyPromptBtn.disabled = true; // Briefly disable
+            console.log("Prompt copied to clipboard.");
+            setTimeout(() => {
+              copyPromptBtn.innerText = originalText;
+              copyPromptBtn.disabled = false;
+            }, 2000); // Reset after 2 seconds
+          })
+          .catch((err) => {
+            console.error("Failed to copy prompt: ", err);
+            alert(
+              "Failed to copy prompt to clipboard. See console for details."
+            );
+          });
+      });
+
+      clear_scr.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+        preview.innerHTML = "";
+        markdownInput.value = "";
+      });
+
+      choose_model.addEventListener("click", async () => {
+        let selectedModel;
+        selectedModel = dropdown_menu.value;
+        model_name = selectedModel;
+        try {
+          const response = await fetch("/select_model", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              selectedModel: selectedModel,
+            }),
+          });
+
+          if (response.ok) {
+            streaming_flag = false; // o3 and o1-pro both use non-streaming
+            markdownInput.value += `\n\n Unique Session ID: ${uniqueId} \n`;
+            markdownInput.value += `\n Model: ${model_name} \n`;
+            markdownInput.value += `\n Streaming: ${streaming_flag} \n`;
+            renderMarkdown(true);
+            autoResize();
+          } else {
+            console.error("Failed to choose model");
+          }
+        } catch (error) {
+          console.error("Error choosing model:", error);
+        }
+      });
+
+      // Auto-resize Function
+      function autoResize() {
+        queryInput.style.height = "auto"; // Reset height
+        const scrollHeight = queryInput.scrollHeight;
+        const maxHeight = 350;
+        if (scrollHeight < maxHeight) {
+          queryInput.style.height = scrollHeight + "px";
+        } else {
+          queryInput.style.height = maxHeight + "px";
+        }
+      }
+
+      // Initial Resize
+      autoResize();
+
+      // Event Listener for Input
+      queryInput.addEventListener("input", autoResize);
+
+      SaveBtn.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+
+        try {
+          const response = await fetch("/choose_save_path");
+          const data = await response.json();
+
+          if (response.ok && data.path) {
+            await saveConversation(data.path); // Pass the full path
+          } else if (data.error) {
+            // Handle cancellation or error from the dialog endpoint
+            console.log("Save cancelled or failed:", data.error);
+          } else {
+            console.log("Save cancelled by user.");
+          }
+        } catch (error) {
+          console.error("Error getting save path:", error);
+          alert("An error occurred while trying to open the save dialog.");
+        }
+      });
+
+      async function saveConversation(fullPath) {
+        try {
+          // Collect the markdown content from the editor
+          const markdownContent = markdownInput.value;
+
+          // Send POST request to the backend /save endpoint
+          const response = await fetch("/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+              full_path: fullPath,
+              content: markdownContent,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            alert(`Conversation saved successfully to ${fullPath}!`);
+          } else {
+            alert(
+              `Failed to save conversation: ${result.error || "Unknown error"}`
+            );
+          }
+        } catch (error) {
+          console.error("Error saving conversation:", error);
+          alert("An error occurred while saving the conversation.");
+        }
+      }
+
+      closeBtn.addEventListener("click", async () => {
+        queryInput.value = "";
+        autoResize();
+        currentFileContents = "";
+        preview.innerHTML = "";
+        markdownInput.value = "";
+
+        fetch("/shutdown", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            } else if (data.error) {
+              alert(`Error: ${data.error}`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      });
+
+      let renderTimeout;
+
+      function renderMarkdown(renderMath = false) {
+        clearTimeout(renderTimeout);
+
+        let markdownText = markdownInput.value;
+
+        marked.setOptions({
+          breaks: true,
+          highlight: function (code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+              return hljs.highlight(code, { language: lang }).value;
+            } else {
+              return hljs.highlightAuto(code).value;
+            }
+          },
+        });
+        let html = marked.parse(markdownText);
+        preview.innerHTML = html;
+        addCopyButtons();
+
+        if (renderMath) {
+          renderTimeout = setTimeout(() => {
+            renderMathJax();
+          }, 500); // 500ms delay
+        }
+      }
+
+      function addCopyButtons() {
+        const codeBlocks = preview.querySelectorAll("pre");
+        codeBlocks.forEach((pre) => {
+          if (!pre.querySelector("button.copy-btn")) {
+            const button = document.createElement("button");
+            button.className = "copy-btn";
+            button.innerText = "Copy";
+            button.onclick = () => {
+              const code = pre.querySelector("code").innerText;
+              navigator.clipboard
+                .writeText(code)
+                .then(() => {
+                  button.innerText = "Copied!";
+                  setTimeout(() => {
+                    button.innerText = "Copy";
+                  }, 2000);
+                })
+                .catch((err) => {
+                  console.error("Failed to copy: ", err);
+                });
+            };
+            pre.appendChild(button);
+          }
+        });
+      }
+
+      function renderMathJax() {
+        if (window.MathJax) {
+          MathJax.typesetPromise([preview]).catch(function (err) {
+            console.error("MathJax typeset failed: " + err.message);
+          });
+        }
+      }
+
+      function appendConversationTurn(userQuery) {
+        markdownInput.value += `\n\n**Model:** ${model_name} \n\n**Assistant:** \n\n`;
+        renderMarkdown(true);
+      }
+
+      submitBtn.addEventListener("click", async () => {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        queryInput.value = "";
+        autoResize();
+        submitBtn.disabled = true;
+        appendConversationTurn(query);
+        currentFileContents = "";
+
+        let isMathRendered = false;
+
+        const url = `/stream?prompt=${encodeURIComponent(
+          query
+        )}&uniqueId=${encodeURIComponent(
+          uniqueId
+        )}&modelname=${encodeURIComponent(model_name)}`;
+
+        // Both o3 and o1-pro use non-streaming mode
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Network error: ${response.statusText}`);
+          }
+          const result = await response.json();
+          if (result.content) {
+            markdownInput.value += result.content;
+          } else {
+            alert(result.error || "Unexpected error");
+          }
+          // Scroll the Editor to the bottom for the latest content
+          markdownInput.scrollTop = markdownInput.scrollHeight;
+          if (!isMathRendered) {
+            // Render the final markdown content to update the preview.
+            let sanitized = sanitizeText(markdownInput.value);
+            markdownInput.value = sanitized;
+            renderMarkdown(true);
+            isMathRendered = true;
+          }
+          await autoSaveConversation();
+          submitBtn.disabled = false;
+        } catch (error) {
+          console.error("Non-streaming error:", error);
+          submitBtn.disabled = false;
+          alert("An error occurred. Please try again.");
+        }
+      });
+
+      resetBtn.addEventListener("click", async () => {
+        try {
+          const response = await fetch("/reset", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uniqueId: uniqueId,
+            }),
+          });
+
+          if (response.ok) {
+            currentFileContents = "";
+            markdownInput.value = "";
+            preview.innerHTML = "";
+            queryInput.value = "";
+            markdownInput.value += `\n Unique Session ID: ${uniqueId} \n`;
+            markdownInput.value += `\n Model: ${model_name} \n`;
+            renderMarkdown();
+            autoResize();
+          } else {
+            console.error("Failed to reset conversation");
+          }
+        } catch (error) {
+          console.error("Error resetting conversation:", error);
+        }
+      });
+
+      queryInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          if (e.ctrlKey) {
+            // Ctrl + Enter: Submit the message
+            e.preventDefault(); // Prevent newline insertion
+            if (submitBtn && !submitBtn.disabled) {
+              submitBtn.click(); // Trigger send button if it's enabled
+            }
+          }
+          // Else: Allow newline insertion
+        }
+      });
+
+      // ———— file‐browser logic (adapted from index2.html) ————
+
+      let selectedFolder = null;
+
+      // recursively build tree
+      function createTree(node, container) {
+        if (Array.isArray(node)) {
+          node.forEach((n) => createTree(n, container));
+          return;
+        }
+        const wrapper = document.createElement("div");
+        wrapper.className = "node";
+
+        if (node.type === "directory") {
+          // collapse/expand
+          const toggle = document.createElement("span");
+          toggle.className = "toggle-triangle";
+          toggle.textContent = "▼";
+          wrapper.appendChild(toggle);
+
+          const label = document.createElement("span");
+          label.className = "directory-entry";
+          label.textContent = node.name;
+          wrapper.appendChild(label);
+
+          container.appendChild(wrapper);
+
+          if (node.children && node.children.length) {
+            const childContainer = document.createElement("div");
+            wrapper.appendChild(childContainer);
+            createTree(node.children, childContainer);
+
+            toggle.onclick = () => {
+              if (childContainer.style.display === "none") {
+                childContainer.style.display = "";
+                toggle.textContent = "▼";
+              } else {
+                childContainer.style.display = "none";
+                toggle.textContent = "▶";
+              }
+            };
+          } else {
+            toggle.style.visibility = "hidden";
+          }
+        } else if (node.type === "file") {
+          const link = document.createElement("a");
+          link.href = "#";
+          link.className = "file-link";
+          link.textContent = node.name;
+
+          link.onclick = (e) => {
+            e.preventDefault();
+            if (!selectedFolder) {
+              alert("Open a folder first.");
+              return;
+            }
+            // relative path keeps the URL short & avoids leaking absolute paths
+            const relPath = node.path.substring(selectedFolder.length + 1);
+            window.open(
+              `/load_chat?rel=${encodeURIComponent(relPath)}`,
+              "_blank"
+            );
+          };
+
+          wrapper.appendChild(link);
+          container.appendChild(wrapper);
+        }
+      }
+
+      function loadDirectoryTree(tree) {
+        const div = document.getElementById("directory-tree");
+        div.innerHTML = "";
+        createTree(tree, div);
+      }
+
+      // "Open Directory" exactly as index2.html does:
+      document.getElementById("open-folder").onclick = async () => {
+        try {
+          const resp = await fetch("/open_folder_chat", { method: "POST" });
+          const data = await resp.json();
+          if (data.error) {
+            alert(data.error);
+          } else {
+            selectedFolder = data.folder;
+            loadDirectoryTree(data.structure);
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Failed to open folder");
+        }
+      };
+
+      // "Refresh" exactly as index2.html does:
+      document.getElementById("refresh").onclick = async () => {
+        if (!selectedFolder) {
+          alert("No folder selected");
+          return;
+        }
+        try {
+          const resp = await fetch("/refresh_chat");
+          const data = await resp.json();
+          if (data.error) {
+            alert(data.error);
+          } else {
+            loadDirectoryTree(data.structure);
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Failed to refresh");
+        }
+      };
+    </script>
+  </body>
+</html>
