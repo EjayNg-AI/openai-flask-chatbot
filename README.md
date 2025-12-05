@@ -2,6 +2,8 @@
 
 A powerful, extensible web-based chatbot supporting multiple Large Language Models (LLMs) including OpenAI (chatgpt-4o-latest, GPT-4o, GPT-4.1, o4-mini, o3, o1-pro), Anthropic (Claude), and Google (Gemini). Features real-time streaming, advanced conversation management, Markdown/code/math rendering, and a unique file viewer for loading local project files directly into the chat context.
 
+**New:** A trimmed-down version (`app_new.py`) is now available, focused exclusively on OpenAI's reasoning models (o3 and o1-pro) using the Responses API.
+
 ---
 
 ## Features
@@ -134,30 +136,52 @@ A powerful, extensible web-based chatbot supporting multiple Large Language Mode
 
 ```
 openai-flask-chatbot/
-├── app.py                  # Flask backend, LLM API logic, file handling
+├── app.py                  # Flask backend, LLM API logic, file handling (full version)
+├── app_new.py              # Trimmed backend - o3 and o1-pro only
 ├── templates/
-│   ├── index.html          # Main chat UI
-│   └── index2.html         # File viewer UI
+│   ├── index.html          # Main chat UI (full version)
+│   ├── index_new.html      # Trimmed chat UI for o3/o1-pro
+│   ├── index2.html         # File viewer UI (full version)
+│   └── index2_new.html     # File viewer UI for trimmed version
 ├── conversations/          # Saved conversations (auto-created)
 ├── requirements.txt
 ├── .env                    # Your API keys (not committed)
+├── .gitignore              # Git ignore rules
+├── AGENTS.md               # Repository guidelines for AI agents
+├── CLAUDE_INSTRUCTIONS.md  # Claude Code-specific instructions
 └── README.md
 ```
+
+### Two Versions Available
+
+| Version | Entry Point | Models | Use Case |
+|---------|-------------|--------|----------|
+| **Full** | `python app.py` | GPT-4o, GPT-4.1, o3, o4-mini, o1-pro, Claude, Gemini | All features, multiple providers |
+| **Trimmed** | `python app_new.py` | o3, o1-pro only | Focused reasoning model usage |
 
 ---
 
 ## Advanced Details
 
 - **Session Management**: Each tab gets a unique session ID; conversation history is isolated.
-- **Conversation Storage**:  
+- **Conversation Storage**:
   - `[name]messages.json`: User/assistant messages for reloading.
   - `[name].md`: Markdown log of the conversation.
   - `[name]all.json`: Full internal state (for debugging).
 - **File Types**: File viewer supports `.py`, `.js`, `.html`, `.css`, `.md`, `.txt`, `.json`, `.ipynb`, etc. (see `app.py` for full list).
-- **Streaming**: Uses Server-Sent Events (SSE) for real-time updates.
-- **Security**:  
+- **Streaming**: Uses Server-Sent Events (SSE) for real-time updates (full version). The trimmed version uses non-streaming Responses API.
+- **Security**:
   - API keys are loaded from `.env` and never exposed to the frontend.
   - The shutdown endpoint is for development only—do not expose in production.
+
+### Trimmed Version Details
+
+The `app_new.py` version provides a streamlined experience for OpenAI's reasoning models:
+
+- **Models**: Only `o3` and `o1-pro` (high reasoning effort enabled)
+- **API**: Uses OpenAI Responses API with `store=True` for conversation persistence
+- **No streaming**: Both models return complete responses
+- **Simplified UI**: Removed Claude Extended Thinking toggle and non-applicable model options
 
 ---
 
