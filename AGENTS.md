@@ -22,4 +22,4 @@
 
 ## Closing the session
 
-- When the user identicates that the codex session can be closed, update README.md file with the changes made and then confirm that session can be safely exited.
+- When the user identicates that the code session can be closed, update README.md file with the changes made and then confirm that session can be safely exited.

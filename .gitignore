@@ -24,9 +24,6 @@ chatbot/
 instance/
 flask_session/
 
-# Conversations
-conversations/
-
 # Zone Identifiers
 *.zoneinfo
 *.tzinfo

@@ -19,9 +19,7 @@ from tkinter import filedialog
 
 
 # Initial system message for chatbot
-SYSTEM_MESSAGE = "You are an expert in coding. " \
-"Write code that is clean, efficient, modular, and well-documented. " \
-"Ensure all code block are encased with triple backticks."
+SYSTEM_MESSAGE = "You are a helpful assistant. You are warm, friendly, and approachable."
 
 # Transient global variables
 unique_id_1 = None
@@ -603,7 +601,7 @@ def stream():
                 full_prompt = []
                 full_prompt.append(
                     {"role": "system", 
-                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide comprehensive, insightful, forward-thinking responses to user queries."}]
+                     "content": [{"type": "input_text", "text": SYSTEM_MESSAGE}]
                      }
                 )
                 for messagedict in conversation_history:
@@ -649,7 +647,7 @@ def stream():
                 full_prompt = []
                 full_prompt.append(
                     {"role": "developer", 
-                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide comprehensive, insightful, forward-thinking responses to user queries."}]
+                     "content": [{"type": "input_text", "text": SYSTEM_MESSAGE}]
                      }
                 )
                 for messagedict in conversation_history:
@@ -695,7 +693,7 @@ def stream():
                 full_prompt = []
                 full_prompt.append(
                     {"role": "developer", 
-                     "content": [{"type": "input_text", "text": "You are a helpful assistant. You provide comprehensive, insightful, forward-thinking responses to user queries."}]
+                     "content": [{"type": "input_text", "text": SYSTEM_MESSAGE}]
                      }
                 )
                 for messagedict in conversation_history:
@@ -1177,11 +1175,16 @@ def load_chat():
 
 
 
-def find_free(base=5000):
+def find_free(base=5000, host="127.0.0.1"):
     for p in range(base, 65536):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("127.0.0.1", p)):
-                return p
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, p))
+            except OSError:
+                continue
+            return p
+    raise RuntimeError("No free ports available.")
 
 if __name__ == "__main__":
     # decide the port only once, pass via env var
@@ -1193,5 +1196,3 @@ if __name__ == "__main__":
             port=port,
             debug=True,
             use_reloader=True)      
-
-
